@@ -1,2 +1,2 @@
 # Peke_Ito
-Nagsasagawa ako ng Linux system at pag-unlad ng kernel.
+Nagsasanay ako sa Linux system at umuunlad ng kernel.

@@ -71,7 +71,13 @@ static int driver_entry(void)
     else
     {
         // 4. Initialize the semaphore
-        sema_init(&virtual_device.sem, 1);
+        retVal = sema_init(&virtual_device.sem, USYNC_THREAD, NULL);
+
+        if (retVal != 0)
+        {
+            printk(KERN_ALERT "myTestDevice: unable to initialize a semaphore\n");
+            return retVal;
+        }
     }
 
     return 0;

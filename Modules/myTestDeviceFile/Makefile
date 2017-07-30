@@ -1,4 +1,4 @@
-obj-m := myTestDeviceDriver.o
+obj-m += myTestDeviceDriver.o
 
 
 KERNEL_DIR = /usr/src/linux-headers-$(shell uname -r)

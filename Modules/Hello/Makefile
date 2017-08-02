@@ -1,6 +1,6 @@
 obj-m += Hello.o
 
-KDIR = /usr/src/linux-headers-4.8.0-36-generic
+KDIR = /usr/src/linux-headers-$(shell uname -r)
 
 
 all:

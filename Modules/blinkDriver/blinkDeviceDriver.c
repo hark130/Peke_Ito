@@ -1,163 +1,100 @@
 #include <linux/module.h>       // ALWAYS NEED
 #include <linux/kernel.h>       // ALWAYS NEED
+#include <linux/usb.h>          // Always needed for USB descriptors
 // Multi-threading synchronization
 #include <linux/semaphore.h>    // used to access semaphores, synchronization behaviors
 
+#define DEVICE_NAME "blink(1) device"
+// Get these values from 'lsusb -v'
+#define VENDOR_ID   0x0000
+#define PRODUCT_ID  0x0000
 
+////////////////////////////////
+/* DEFINE NECESSARY VARIABLES */
+////////////////////////////////
 // 1. Create a struct for our fake device
 struct fake_device
 {
-    char data[100];
+    // char data[100];
     struct semaphore sem;
 } virtual_device;
 
-
-#define DEVICE_NAME     "blinkDevice"
-
-// 7. Define the file operation functions
-// 7.1. device_open
-//  Called on defice_file open
-//      inode reference to the file on disk
-//      and contains information about that file
-//      struct file represents an abstract open file
-int device_open(struct inode *inode, struct file *filp)
+// 2. Create a Vendor/Product ID struct
+static struct usb_device_id blink_table[] = 
 {
-    // Only allow one process to open this device by using a semaphore as mutal exclusive lock - mutext
-    retVal = down_interruptible(&virtual_device.sem);
-    if (retVal != 0)
-    {
-        printk(KERN_ALERT "myTestDevice: could not lock device during open\n");
-        return -1;
-    }
-    else
-    {
-        printk(KERN_INFO "myTestDevice: opened device\n");
-    }
+    { USB_DEVICE(VENDOR_ID, PRODUCT_id) },
+    {} // Terminating entry
+};
+MODULE_DEVICE_TABLE(usb, blink_table);
 
-    return 0;
-}
-
-
-// 7.2. device_read
-// Called when user wants to get information from the device
-ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff_t* curOffset)
+// 3. Create a USB Driver struct
+static struct usb_driver blink_driver =
 {
-    // Take data from kernel space (device) to user space (process)
-    printk(KERN_INFO "myTestDevice: reading from device\n");
-    return copy_to_user(bufStoreData, virtual_device.data, bufCount);
-}
-
-
-// 7.3. device_write
-// Called when user wants to send information to the device
-ssize_t device_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset)
-{
-    // Send data from user to kernel
-    // copy_from_user(dest, source, count)
-    printk(KERN_INFO "myTestDevice: writing to device\n");
-    return copy_from_user(virtual_device.data, bufSourceData, bufCount);
-}
-
-
-// 7.4. device_close
-// Called upon user close
-int device_close(struct inode *inode, struct file *filp)
-{
-    // By calling up, which is opposite of down for semaphores, we release
-    //  the mutex that we obtained at device open
-    // This has the effect of allowing other processes to use the device now
-    up(&virtual_device.sem);
-    printk(KERN_INFO "myTestDevice: closed device\n");
-    return 0;
-}
-
-
-// 6. Define the file_operations struct
-// This tells the kernel which functions to call when a user operates on our device file_operations
-struct file_operations fops =
-{
-    .owner = THIS_MODULE,       // Prevent unloading of this module when operations are in use
-    .open = device_open,        // Points to the method to call when opening the device
-    .release = device_close,    // Points to the method to call when closing the device
-    .write = device_write,      // Points to the method to call when writing to the device
-    .read = device_read         // Points to the method to call when reading from the device
+    .name = DEVICE_NAME,
+    .id_table = blink_table,
+    .probe = blink_probe,
+    .disconnect = blink_disconnect,
 };
 
-// int driver_entry(void)
-static int driver_entry(void)
+// 4. Other
+int retVal;             // Will be used to hold return values of functions; this is because the kernel stack is very small
+                        //  so declaring variables all over the place in our module functions eats up the stack very fast
+
+
+/////////////////////////////////////
+/* USB DEVICE DRIVER FUNCTIONALITY */
+/////////////////////////////////////
+static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id)
 {
-    // 3. Register our device with the system
-    // 3.1. Use dynamic allocation to assign our device
-    //      a major number-- alloc_chrdev_region(dev_t*, uint fminor, uint count, char* name)
-    retVal = alloc_chrdev_region(&dev_num, 0, 1, DEVICE_NAME);
-    if (retVal < 0)
-    {
-        printk(KERN_ALERT "myTestDevice: failed to allocate a major number\n");
-        return retVal;
-    }
-    major_number = MAJOR(dev_num);  // Macro extracts the major number
-    printk(KERN_INFO "myTestDevice: major number is %d\n", major_number);
-    // printk(KERN_INFO "\tDEVICE_NAME: %s\n", DEVICE_NAME);
-    // printk(KERN_INFO "\tMAJOR NUMBER: %d\n", major_number);
-    printk(KERN_INFO "\tUse 'mknod /dev/%s c %d 0' for device file\n", DEVICE_NAME, major_number);
-
-    // 3.2. Allocate and initialize the character device structure
-    myCdev = cdev_alloc();  // Create our cdev structure
-    // initialize our cdev structure
-    if (myCdev)
-    {
-        myCdev->ops = &fops;            // Struct file_operations
-        myCdev->owner = THIS_MODULE;    // Very common
-    }
-    else
-    {
-        printk(KERN_ALERT "myTestDevice: failed to allocate the cdev structure\n");
-        return -1;
-    }
-
-    // Now add this character device to the system
-    retVal = cdev_add(myCdev, dev_num, 1);
-
-    if (retVal < 0)
-    {
-        printk(KERN_ALERT "myTestDevice: unable to add cdev to kernel\n");
-        return retVal;
-    }
-    // The device is now "live" and can be called by the kernel
-    else
-    {
-        // 4. Initialize the semaphore
-        // PRO TIP:  USYNC_THREAD and USYNC_PROCESS come from synch.h on Solaris
-        // retVal = sema_init(&virtual_device.sem, USYNC_THREAD, NULL);
-        // retVal = sema_init(&virtual_device.sem, USYNC_PROCESS, NULL);
-        // retVal = sema_init(&virtual_device.sem, 1, NULL);  // ERROR: TOO MANY ARGUMENTS
-        sema_init(&virtual_device.sem, 1);
-
-        // PRO TIP:  Non-Solaris sema_init has a return value of void
-        //     if (retVal != 0)
-        //     {
-        //         printk(KERN_ALERT "myTestDevice: unable to initialize a semaphore\n");
-        //         return retVal;
-        //     }
-        // }
-    }
-
+    printk(KERN_INFO "%s: blink(1) (%04X:%04X) active\n", DEVICE_NAME, id->idVendor, id->idProduct);
     return 0;
 }
 
 
-static void driver_exit(void)
+static void blink_disconnect(struct usb_interface* interface)
 {
-    // 5. Do everything in the reverse order
-    // 5.1. Unregister the cdev
-    cdev_del(myCdev);
+    printk(KERN_INFO "%s: blink(1) removed\n", DEVICE_NAME);
+    return;
+}
 
-    // 5.2. Unregister the device number
-    unregister_chrdev_region(dev_num, 1);
-    printk(KERN_ALERT "myTestDevice: unloaded module\n");
+
+static int __init driver_entry(void)
+{
+    // 1. Initialize the semaphore
+    retVal = sema_init(&virtual_device.sem, 1);
+    if (retVal)
+    {
+        printk(KERN_ALERT "%s: Unable to initialize semaphore\nsema_init() returned %d\n", DEVICE_NAME, retVal);
+    }
+    else
+    {
+        // 2. Register this driver with the USB subsystem
+        retVal = usb_register(&blink_driver);
+        if (retVal)
+        {
+            printk(KERN_ALERT "%s: Unable to register USB\nusb_register() returned %d\n", DEVICE_NAME, retVal);
+        }
+    }
+
+    return retVal;
+}
+
+
+static void __exit driver_exit(void)
+{
+    usb_deregister(&blink_driver);
+    printk(KERN_ALERT "%s: unloaded module\n", DEVICE_NAME);
 
     return;
 }
 
 module_init(driver_entry);
 module_exit(driver_exit);
+
+
+////////////////////////
+/* DRIVER INFORMATION */
+////////////////////////
+MODULE_LICENSE("GNU General Public License v3.0");
+MODULE_AUTHOR("Joseph 'Makleford' Harkleroad");
+MODULE_DESCRIPTION("Customized blink(1) driver (see: https://blink1.thingm.com/)");

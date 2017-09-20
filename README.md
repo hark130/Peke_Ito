@@ -11,7 +11,7 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 ## To Do
     [X] Hello World lkm
     [X] Basic Character Driver
-    [ ] "Unk" USB Device Driver (blink(1), RGB LED)
+    [/] "Unk" USB Device Driver (blink(1), RGB LED)
     [ ] "Unk" USB Device Driver (Nerf-style turret)
 
 ## Resources

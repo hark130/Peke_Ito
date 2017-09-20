@@ -9,6 +9,9 @@
 #define VENDOR_ID   0x0000
 #define PRODUCT_ID  0x0000
 
+static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
+static void blink_disconnect(struct usb_interface* interface);
+
 ////////////////////////////////
 /* DEFINE NECESSARY VARIABLES */
 ////////////////////////////////
@@ -20,9 +23,9 @@ struct fake_device
 } virtual_device;
 
 // 2. Create a Vendor/Product ID struct
-static struct usb_device_id blink_table[] = 
+static struct usb_device_id blink_table[] =
 {
-    { USB_DEVICE(VENDOR_ID, PRODUCT_id) },
+    { USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
     {} // Terminating entry
 };
 MODULE_DEVICE_TABLE(usb, blink_table);
@@ -61,19 +64,13 @@ static void blink_disconnect(struct usb_interface* interface)
 static int __init driver_entry(void)
 {
     // 1. Initialize the semaphore
-    retVal = sema_init(&virtual_device.sem, 1);
+    sema_init(&virtual_device.sem, 1);
+
+    // 2. Register this driver with the USB subsystem
+    retVal = usb_register(&blink_driver);
     if (retVal)
     {
-        printk(KERN_ALERT "%s: Unable to initialize semaphore\nsema_init() returned %d\n", DEVICE_NAME, retVal);
-    }
-    else
-    {
-        // 2. Register this driver with the USB subsystem
-        retVal = usb_register(&blink_driver);
-        if (retVal)
-        {
-            printk(KERN_ALERT "%s: Unable to register USB\nusb_register() returned %d\n", DEVICE_NAME, retVal);
-        }
+        printk(KERN_ALERT "%s: Unable to register USB\nusb_register() returned %d\n", DEVICE_NAME, retVal);
     }
 
     return retVal;
@@ -95,6 +92,6 @@ module_exit(driver_exit);
 ////////////////////////
 /* DRIVER INFORMATION */
 ////////////////////////
-MODULE_LICENSE("GNU General Public License v3.0");
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Joseph 'Makleford' Harkleroad");
 MODULE_DESCRIPTION("Customized blink(1) driver (see: https://blink1.thingm.com/)");

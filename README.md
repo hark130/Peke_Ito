@@ -20,3 +20,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * https://kernel.readthedocs.io/en/sphinx-samples/writing_usb_driver.html
 * http://www.linuxjournal.com/article/7353
 * https://www.safaribooksonline.com/library/view/linux-device-drivers/0596005903/ch13.html
+* http://www.tldp.org/HOWTO/html_single/Module-HOWTO/

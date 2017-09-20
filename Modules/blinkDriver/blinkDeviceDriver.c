@@ -6,8 +6,8 @@
 
 #define DEVICE_NAME "blink(1) device"
 // Get these values from 'lsusb -v'
-#define VENDOR_ID   0x0000
-#define PRODUCT_ID  0x0000
+#define VENDOR_ID   0x27B8
+#define PRODUCT_ID  0x01ED
 
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);

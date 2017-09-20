@@ -95,3 +95,19 @@ module_exit(driver_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Joseph 'Makleford' Harkleroad");
 MODULE_DESCRIPTION("Customized blink(1) driver (see: https://blink1.thingm.com/)");
+
+//////////////////////////
+/* GATHERED INFORMATION */
+//////////////////////////
+
+/* COMMAND CODES */
+// 'c';   // command code for 'fade to rgb'
+// 'n';   // command code for "set rgb now"
+// 'W';   // command code for "write pattern to flash"
+// 'l';   // command code for "set ledn"
+// '!';   // command code for "test"
+// 'v';   // command code for "get version"
+// 'r';   // command code for "read rgb"
+// 'S';   // command code for "read play state"
+// 'P';   // command code for "write pattern line"
+// 'R';   // command code for "read pattern line n"

@@ -8,15 +8,15 @@ Device Descriptor:
   bDescriptorType         1
   bcdUSB               2.00
   bDeviceClass            0 (Defined at Interface level)
-  bDeviceSubClass         0 
-  bDeviceProtocol         0 
+  bDeviceSubClass         0
+  bDeviceProtocol         0
   bMaxPacketSize0         8
   idVendor           0x27b8 ThingM
   idProduct          0x01ed blink(1)
   bcdDevice            0.02
-  iManufacturer           1 
-  iProduct                2 
-  iSerial                 3 
+  iManufacturer           1
+  iProduct                2
+  iSerial                 3
   bNumConfigurations      1
   Configuration Descriptor:
     bLength                 9
@@ -24,7 +24,7 @@ Device Descriptor:
     wTotalLength           41
     bNumInterfaces          1
     bConfigurationValue     1
-    iConfiguration          0 
+    iConfiguration          0
     bmAttributes         0x80
       (Bus Powered)
     MaxPower              120mA
@@ -37,7 +37,7 @@ Device Descriptor:
       bInterfaceClass         3 Human Interface Device
       bInterfaceSubClass      0 No Subclass
       bInterfaceProtocol      0 None
-      iInterface              0 
+      iInterface              0
         HID Device Descriptor:
           bLength                 9
           bDescriptorType        33
@@ -46,7 +46,7 @@ Device Descriptor:
           bNumDescriptors         1
           bDescriptorType        34 Report
           wDescriptorLength      24
-         Report Descriptors: 
+         Report Descriptors:
            ** UNAVAILABLE **
       Endpoint Descriptor:
         bLength                 7
@@ -74,3 +74,24 @@ Device Descriptor:
 [ 2643.906592] hid-led 0003:27B8:01ED.0002: hidraw1: USB HID v1.01 Device [ThingM blink(1) mk2] on usb-0000:02:00.0-2.1/input0
 [ 2643.906711] hid-led 0003:27B8:01ED.0002: ThingM blink(1) initialized
 
+
+///////////////////////////////////////////////////
+//////////////// dmesg after load /////////////////
+///////////////////////////////////////////////////
+
+[ 4762.052059] usb 1-2.1: new full-speed USB device number 6 using uhci_hcd
+[ 4762.328080] usb 1-2.1: config 1 interface 0 altsetting 0 has 2 endpoint descriptors, different from the interface descriptor's value: 1
+[ 4762.337762] usb 1-2.1: New USB device found, idVendor=27b8, idProduct=01ed
+[ 4762.337764] usb 1-2.1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 4762.337766] usb 1-2.1: Product: blink(1) mk2
+[ 4762.337767] usb 1-2.1: Manufacturer: ThingM
+[ 4762.337768] usb 1-2.1: SerialNumber: 2000A1F0
+[ 4762.339199] blink(1) device: blink(1) (27B8:01ED) active
+
+
+///////////////////////////////////////////////////
+/////////////// dmesg after unload ////////////////
+///////////////////////////////////////////////////
+
+[ 5096.256146] usb 1-2.1: USB disconnect, device number 6
+[ 5096.256219] blink(1) device: blink(1) removed

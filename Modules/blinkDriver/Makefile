@@ -1,4 +1,4 @@
-obj-m += blinkDriver.o
+obj-m += blinkDeviceDriver.o
 
 KERNEL_DIR = /usr/src/linux-headers-$(shell uname -r)
 

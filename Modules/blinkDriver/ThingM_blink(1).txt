@@ -1,3 +1,7 @@
+//////////////////////////////////////////
+//////////////// lsusb -v ////////////////
+//////////////////////////////////////////
+
 Bus 001 Device 004: ID 27b8:01ed ThingM blink(1)
 Device Descriptor:
   bLength                18
@@ -54,3 +58,19 @@ Device Descriptor:
           Usage Type               Data
         wMaxPacketSize     0x0008  1x 8 bytes
         bInterval               1
+
+
+///////////////////////////////////////////////////
+//////////////// dmesg | tail -n 9 ////////////////
+///////////////////////////////////////////////////
+
+[ 2643.580216] usb 1-2.1: new full-speed USB device number 4 using uhci_hcd
+[ 2643.852404] usb 1-2.1: config 1 interface 0 altsetting 0 has 2 endpoint descriptors, different from the interface descriptor's value: 1
+[ 2643.861193] usb 1-2.1: New USB device found, idVendor=27b8, idProduct=01ed
+[ 2643.861197] usb 1-2.1: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+[ 2643.861199] usb 1-2.1: Product: blink(1) mk2
+[ 2643.861201] usb 1-2.1: Manufacturer: ThingM
+[ 2643.861203] usb 1-2.1: SerialNumber: 2000A1F0
+[ 2643.906592] hid-led 0003:27B8:01ED.0002: hidraw1: USB HID v1.01 Device [ThingM blink(1) mk2] on usb-0000:02:00.0-2.1/input0
+[ 2643.906711] hid-led 0003:27B8:01ED.0002: ThingM blink(1) initialized
+

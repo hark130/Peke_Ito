@@ -17,23 +17,23 @@ Device Descriptor:
   iManufacturer           1
   iProduct                2
   iSerial                 3
-  bNumConfigurations      1
-  Configuration Descriptor:
+  bNumConfigurations      1  // Devices usually have one or more configurations
+  Configuration Descriptor:  // A collection of related interfaces(?)
     bLength                 9
     bDescriptorType         2
     wTotalLength           41
-    bNumInterfaces          1
+    bNumInterfaces          1  // Configurations often have one or more interfaces
     bConfigurationValue     1
     iConfiguration          0
     bmAttributes         0x80
       (Bus Powered)
     MaxPower              120mA
-    Interface Descriptor:
+    Interface Descriptor: // A collection of related endpoints(?)
       bLength                 9
       bDescriptorType         4
-      bInterfaceNumber        0
-      bAlternateSetting       0
-      bNumEndpoints           1
+      bInterfaceNumber        0  // Initial state of an interface is here, Interface #0
+      bAlternateSetting       0  // Interfaces usually have one or more settings 
+      bNumEndpoints           1  // Interfaces have zero or more endpoints
       bInterfaceClass         3 Human Interface Device
       bInterfaceSubClass      0 No Subclass
       bInterfaceProtocol      0 None

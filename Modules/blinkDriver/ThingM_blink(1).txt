@@ -23,7 +23,7 @@ Device Descriptor:
     bDescriptorType         2
     wTotalLength           41
     bNumInterfaces          1  // Configurations often have one or more interfaces
-    bConfigurationValue     1
+    bConfigurationValue     1  // This can be modified to change the active USB config being used
     iConfiguration          0
     bmAttributes         0x80
       (Bus Powered)

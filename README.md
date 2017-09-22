@@ -12,6 +12,13 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
     [X] Hello World lkm
     [X] Basic Character Driver
     [/] "Unk" USB Device Driver (blink(1), RGB LED)
+        [ ] Get/create/allocate struct usb_interface for the device (...but how?)
+        [ ] Convert between struct usb_interface and struct usb_device using interface_to_usbdev()? (see: Ch 13 Pg 332)
+        [ ] Create an URB w/ usb_alloc_urb() (Init?)
+        [ ] Fill in URB w/ usb_fill_int_urb() (Init?)
+        [ ] Send data w/ usb_submit_urb() (Probe?  New function?)
+        [ ] Handle URB Completion (see: Ch 13 - Completing Urbs: The Completion Callback Handler)
+        [ ] NOTE: Continue reading Ch 13 at "Writing a USB Driver"
     [ ] "Unk" USB Device Driver (Nerf-style turret)
     [ ] Manage concurrent execution
         * include <linux/sched.h>

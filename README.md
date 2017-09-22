@@ -31,3 +31,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * https://msdn.microsoft.com/en-us/library/windows/hardware/ff539261(v=vs.85).aspx
 * https://stackoverflow.com/questions/9505105/usb-getting-data-from-a-device
 * https://github.com/todbot/blink1
+* [Linux Device Drivers 3rd Edition](http://www.free-electrons.com/doc/books/ldd3.pdf)

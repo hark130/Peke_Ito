@@ -13,6 +13,10 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
     [X] Basic Character Driver
     [/] "Unk" USB Device Driver (blink(1), RGB LED)
     [ ] "Unk" USB Device Driver (Nerf-style turret)
+    [ ] Manage concurrent execution
+        * include <linux/sched.h>
+        * printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);
+        * See: Linux Device Drivers Chapter 2
 
 ## Resources
 * http://opensourceforu.com/2011/10/usb-drivers-in-linux-1/

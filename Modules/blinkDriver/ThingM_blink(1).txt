@@ -48,16 +48,16 @@ Device Descriptor:
           wDescriptorLength      24
          Report Descriptors:
            ** UNAVAILABLE **
-      Endpoint Descriptor:
+      Endpoint Descriptor:  // Describes how the data is transmitted
         bLength                 7
         bDescriptorType         5
-        bEndpointAddress     0x81  EP 1 IN
-        bmAttributes            3
-          Transfer Type            Interrupt
+        bEndpointAddress     0x81  EP 1 IN  // USB address of this endpoint.  Direction == USB_DIR_IN
+        bmAttributes            3  // 3 == USB_ENDPOINT_XFER_INT (?)
+          Transfer Type            Interrupt  // Transfer small amounts of data at a fixed rate
           Synch Type               None
           Usage Type               Data
-        wMaxPacketSize     0x0008  1x 8 bytes
-        bInterval               1
+        wMaxPacketSize     0x0008  1x 8 bytes  // Max # bytes endpoint can handle at once
+        bInterval               1  // Time, in milliseconds, between interrupt requests for the endpoint
 
 
 ///////////////////////////////////////////////////

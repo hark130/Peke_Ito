@@ -95,6 +95,7 @@ module_exit(driver_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Joseph 'Makleford' Harkleroad");
 MODULE_DESCRIPTION("Customized blink(1) driver (see: https://blink1.thingm.com/)");
+MODULE_VERSION("0.1");  // Not yet releasable
 
 //////////////////////////
 /* GATHERED INFORMATION */

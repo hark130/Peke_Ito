@@ -2,11 +2,19 @@
 Nagsasanay ako sa Linux system at umuunlad ng kernel.
 
 ## Instructions
+### Hello.ko and myTestDeviceDriver.ko
     1.  make
     2.  sudo insmod 'driver'.ko
     3.  dmesg | tail -n 10
     4.  sudo mknod /dev/'driver' c <num> 0
     5.  sudo rmmod <driver>.ko
+    6. rm /dev/'driver'
+### blinkDeviceDriver.ko
+    1.  make
+    2.  sudo rmmod hid_generic
+    3.  sudo rmmod usbhid
+    4.  sudo rmmod hid_led
+    5.  sudo insmod blinkDeviceDriver.ko
 
 ## To Do
     [X] Hello World lkm

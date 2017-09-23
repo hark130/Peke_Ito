@@ -47,3 +47,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * https://stackoverflow.com/questions/9505105/usb-getting-data-from-a-device
 * https://github.com/todbot/blink1
 * [Linux Device Drivers 3rd Edition](http://www.free-electrons.com/doc/books/ldd3.pdf)
+* [Write/Read USB Device](http://opensourceforu.com/2011/12/data-transfers-to-from-usb-devices/)

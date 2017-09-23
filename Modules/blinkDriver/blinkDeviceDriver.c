@@ -3,11 +3,14 @@
 #include <linux/usb.h>          // Always needed for USB descriptors
 // Multi-threading synchronization
 #include <linux/semaphore.h>    // used to access semaphores, synchronization behaviors
+// Used to assist in mapping data from user space to kernel space
+#include <asm/uaccess.h>         // copy_to_user, copy_from_user
 
 #define DEVICE_NAME "blink(1) device"
 // Get these values from 'lsusb -v'
 #define VENDOR_ID   0x27B8
 #define PRODUCT_ID  0x01ED
+#define BUFF_SIZE 8
 
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);
@@ -18,11 +21,13 @@ static void blink_disconnect(struct usb_interface* interface);
 // 1. Create a struct for our fake device
 struct fake_device
 {
-    // char data[100];
+    char data[BUFF_SIZE + 1];  // Holds data from user to device
     struct semaphore sem;
 } virtual_device;
 
-// 2. Create a Vendor/Product ID struct
+// 2. Create a usb_device_id struct
+// Describes type of USB devices this driver supports
+// Adds VendorID and Product ID to the usb_device_id struct
 static struct usb_device_id blink_table[] =
 {
     { USB_DEVICE(VENDOR_ID, PRODUCT_ID) },
@@ -39,7 +44,10 @@ static struct usb_driver blink_driver =
     .disconnect = blink_disconnect,
 };
 
-// 4. Other
+// 4. USB Request Block pointer
+struct urb* blinkURB = NULL;
+
+// 5. Other
 int retVal;             // Will be used to hold return values of functions; this is because the kernel stack is very small
                         //  so declaring variables all over the place in our module functions eats up the stack very fast
 
@@ -58,6 +66,16 @@ static void blink_disconnect(struct usb_interface* interface)
 {
     printk(KERN_INFO "%s: blink(1) removed\n", DEVICE_NAME);
     return;
+}
+
+
+// Called when user wants to send information to the device
+ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset)
+{
+    // Send data from user to kernel
+    // copy_from_user(dest, source, count)
+    printk(KERN_INFO "%s: writing to device\n", DEVICE_NAME);
+    return copy_from_user(virtual_device.data, bufSourceData, BUFF_SIZE);
 }
 
 

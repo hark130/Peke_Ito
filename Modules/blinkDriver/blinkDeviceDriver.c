@@ -17,6 +17,7 @@
 int blink_open(struct inode *inode, struct file *filp);
 int blink_close(struct inode *inode, struct file *filp);
 ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset);
+static void blink_completion_handler(struct urb urb);
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);
 
@@ -72,6 +73,7 @@ int retVal;                                 // Will be used to hold return value
                                             //  so declaring variables all over the place in our module functions eats up the stack very fast
 int i;                                      // Iterating variable
 unsigned int blinkPipe;                     // The specific endpoint of the USB device to send URBs
+unsigned int blinkInterval;                 // Interval for polling endpoint for data transfers
 
 
 /////////////////////////////////////
@@ -144,10 +146,11 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
         {
             /*
             // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint)
-            usb_fill_int_urb(blinkURB, blinkDevice, // usb_sndintpipe or usb_rcvintpipe
-                             virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), // usb_complete_t complete
-                             // void *context
-                             // int interval };
+            usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
+                             virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
+                             blink_completion_handler,
+                             blinkURB->context,
+                             blinkInterval };
                              */
             printk(KERN_INFO "%s: This is where we would be filling in the URB\n", DEVICE_NAME);
 
@@ -178,6 +181,28 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 }
 
 
+static void blink_completion_handler(struct urb urb)
+/* called when data arrives from device (usb-core)*/
+{
+    // struct foo *foo = (struct foo *)urb->context;
+    // unsigned char* data = foo->data;  /* the data from the device */
+    // struct input_dev *input_dev = foo->inputdev;
+    switch(urb->status)
+    {
+        case 0:
+            /* success, first process data, then send keys, abs/rel, events */
+            // input_report_abs(input_dev, type, code, value);  // NOT SURE WHAT THIS DOES
+            /* and/or input_event(), input_report_rel(), input_report_key() */
+            printk(KERN_INFO "%s: The completion handler was successful.\n", DEVICE_NAME);
+            break;
+        default:
+            /* handle error */
+            printk(KERN_ERR "%s: The completion handler experienced an error status of %d.\n", DEVICE_NAME, urb->status);
+            break;
+    }
+}
+
+
 /* DEVICE OPERATIONS */
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id)
 {
@@ -185,12 +210,32 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
 
     blinkDevice = interface_to_usbdev(interface);
 
+    /* ATTEMPTINT TO FIND ENDPOINT */
+    retVal |= interface->cur_altsetting->desc.bNumEndpoints;  // Number of endpoints for this interface
+    printk(KERN_INFO "%s: This interface has %d endpoints.\n", DEVICE_NAME, retVal);
+    for (i = 0; i < interface->cur_altsetting->desc.bNumEndpoints; i++)
+    {
+        retVal = 0;
+        retVal |= interface->cur_altsetting->endpoint[i].desc.bDescriptorType;
+        printk(KERN_INFO "%s: Endpoint #%d has bDescriptorType: %d.\n", DEVICE_NAME, i, retVal);
+        retVal = 0;
+        retVal |= interface->cur_altsetting->endpoint[i].desc.bEndpointAddress;
+        printk(KERN_INFO "%s: Endpoint #%d has bEndpointAddress: %d.\n", DEVICE_NAME, i, retVal);
+        retVal = 0;
+        retVal |= interface->cur_altsetting->endpoint[i].desc.bmAttributes;
+        printk(KERN_INFO "%s: Endpoint #%d has bmAttributes: %d.\n", DEVICE_NAME, i, retVal);
+    }
+    /* HARD CODED */
+    blinkPipe = usb_rcvintpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
+    blinkInterval = interface->cur_altsetting->endpoint[0].desc.bEndpointInterval;
+    retVal = 0;  // Done messing around with DEBUG statements
+
     blinkClass.name = "usb/blink%d";
     blinkClass.fops = &blinkOps;
     if ((retVal = usb_register_dev(interface, &blinkClass)) < 0)
     {
         /* Something prevented us from registering this driver */
-        printk(KERN_ALERT "%s: Not able to get a minor.", DEVICE_NAME);
+        printk(KERN_ALERT "%s: Not able to get a minor.\n", DEVICE_NAME);
     }
     else
     {

@@ -62,6 +62,9 @@ struct file_operations blinkOps =
 };
 
 // 6. Other
+static struct usb_device* device;  // ???
+static struct usb_class_driver class;  // ???
+int major_number;       // Will store our major number - extracted from dev_t using macro - mknod /director/file c major minor
 int retVal;             // Will be used to hold return values of functions; this is because the kernel stack is very small
                         //  so declaring variables all over the place in our module functions eats up the stack very fast
 
@@ -118,8 +121,24 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 /* DEVICE OPERATIONS */
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id)
 {
+    retVal = 0;
+
+    device = interface_to_usbdev(interface);
+
+    class.name = "usb/blink%d";
+    class.fops = &blinkOps;
+    if ((retVal = usb_register_dev(interface, &class)) < 0)
+    {
+        /* Something prevented us from registering this driver */
+        printk(KERN_ALERT "%s: Not able to get a minor.", DEVICE_NAME);
+    }
+    else
+    {
+        printk(KERN_INFO "%s: Minor obtained: %d\n", DEVICE_NAME, interface->minor);
+    }
+
     printk(KERN_INFO "%s: blink(1) (%04X:%04X) active\n", DEVICE_NAME, id->idVendor, id->idProduct);
-    return 0;
+    return retVal;
 }
 
 
@@ -152,7 +171,7 @@ static int __init driver_entry(void)
 static void __exit driver_exit(void)
 {
     usb_deregister(&blink_driver);
-    printk(KERN_ALERT "%s: unloaded module\n", DEVICE_NAME);
+    printk(KERN_INFO "%s: unloaded module\n", DEVICE_NAME);
 
     return;
 }

@@ -41,7 +41,8 @@ int main(void)
                 // case '?':
                 //     break;
                 case 's':
-                    writeBuff[0] = 'n';     // command code for "set rgb now"
+                    writeBuff[0] = 1;       // No idea why
+                    writeBuff[1] = 'n';     // command code for "set rgb now"
                     writeBuff[2] = 255;     // Green
                     write(fd, writeBuff, sizeof(writeBuff));
                     break;

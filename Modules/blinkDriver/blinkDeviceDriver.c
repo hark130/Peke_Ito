@@ -161,29 +161,43 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             {
                 case(0):
                     printk(KERN_INFO "%s: URB successfully completed!\n", DEVICE_NAME);
+                case(-ENOENT):
+                    printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "The urb was stopped by a call to usb_kill_urb (-ENOENT)");
+                    break;
+                case(-ECONNRESET):
+                    printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "The urb was unlinked by a call to usb_unlink_urb (-ECONNRESET)");
+                    break;
+                case(-ESHUTDOWN):
+                    printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "There was a severe error with the USB host controller driver (-ESHUTDOWN)");
+                    break;
+                case(-EINPROGRESS):
+                    printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "The urb is still being processed by the USB host controllers (-EINPROGRESS)");
+                    break;
+                case(-EPROTO):
+                    printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "A bitstuff error happened during transfer or no response packet was received by the hardware (-EPROTO)");
+                    break;
+                case(-EILSEQ):
+                    printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "There was a CRC mismatch in the urb transfer (-EILSEQ)");
+                    break;
+                case(-EPIPE):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Stalled endpoint (-EPIPE)");
+                    break;
+                case(-ECOMM):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Data was received too fast to be written to system memory (-ECOMM)");
                     break;
                 case(-ENOMEM):
-                case(ENOMEM):
                     printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Out of memory (-ENOMEM)");
                     break;
                 case(-ENODEV):
-                case(ENODEV):
                     printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Unplugged device (-ENODEV)");
                     break;
-                case(-EPIPE):
-                case(EPIPE):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Stalled endpoint (-EPIPE)");
-                    break;
                 case(-EAGAIN):
-                case(EAGAIN):
                     printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Too many queued ISO transfers (-EAGAIN)");
                     break;
                 case(-EFBIG):
-                case(EFBIG):
                     printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Too many requested ISO frames (-EFBIG)");
                     break;
                 case(-EINVAL):
-                case(EINVAL):
                     printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Invalid INT interval/More than one packet for INT (-EINVAL)");
                     break;
                 default:

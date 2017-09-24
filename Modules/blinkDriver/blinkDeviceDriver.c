@@ -12,8 +12,9 @@
 #define PRODUCT_ID  0x01ED
 #define BUFF_SIZE 8
 
-int device_open(struct inode *inode, struct file *filp);
-int device_close(struct inode *inode, struct file *filp);
+int blink_open(struct inode *inode, struct file *filp);
+int blink_close(struct inode *inode, struct file *filp);
+ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset);
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);
 
@@ -54,10 +55,10 @@ struct urb* blinkURB = NULL;
 struct file_operations blinkOps =
 {
     .owner = THIS_MODULE,       // Prevent unloading of this module when operations are in use
-    .open = device_open,        // Points to the method to call when opening the device
-    .release = device_close,    // Points to the method to call when closing the device
-    .write = device_write,      // Points to the method to call when writing to the device
-    // .read = device_read         // Points to the method to call when reading from the device
+    .open = blink_open,        // Points to the method to call when opening the device
+    .release = blink_close,    // Points to the method to call when closing the device
+    .write = blink_write,      // Points to the method to call when writing to the device
+    // .read = blink_read         // Points to the method to call when reading from the device
 };
 
 // 6. Other
@@ -74,7 +75,7 @@ int retVal;             // Will be used to hold return values of functions; this
 //      inode reference to the file on disk
 //      and contains information about that file
 //      struct file represents an abstract open file
-int device_open(struct inode *inode, struct file *filp)
+int blink_open(struct inode *inode, struct file *filp)
 {
     // Only allow one process to open this device by using a semaphore as mutal exclusive lock - mutext
     retVal = down_interruptible(&virtual_device.sem);
@@ -93,7 +94,7 @@ int device_open(struct inode *inode, struct file *filp)
 
 
 // Called upon user close
-int device_close(struct inode *inode, struct file *filp)
+int blink_close(struct inode *inode, struct file *filp)
 {
     // By calling up, which is opposite of down for semaphores, we release
     //  the mutex that we obtained at device open

@@ -64,12 +64,13 @@ struct file_operations blinkOps =
 };
 
 // 6. Other
-static struct usb_device* blinkDevice;  // ???
-static struct usb_class_driver class;  // ???
-int major_number;       // Will store our major number - extracted from dev_t using macro - mknod /director/file c major minor
-int retVal;             // Will be used to hold return values of functions; this is because the kernel stack is very small
-                        //  so declaring variables all over the place in our module functions eats up the stack very fast
-int i;                  // Iterating variable
+static struct usb_device* blinkDevice;      // Initialized by interface_to_usbdev(interface) in blink_probe()
+static struct usb_class_driver blinkClass;  // ???
+int major_number;                           // Will store our major number - extracted from dev_t using macro - mknod /director/file c major minor
+int retVal;                                 // Will be used to hold return values of functions; this is because the kernel stack is very small
+                                            //  so declaring variables all over the place in our module functions eats up the stack very fast
+int i;                                      // Iterating variable
+unsigned int blinkPipe;                     // The specific endpoint of the USB device to send URBs
 
 
 /////////////////////////////////////
@@ -140,6 +141,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
         }
         else
         {
+            // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint) 
             usb_fill_int_urb(blinkURB, blinkDevice, // usb_sndintpipe or usb_rcvintpipe
                              virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), // usb_complete_t complete
                              // void *context
@@ -176,11 +178,11 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
 {
     retVal = 0;
 
-    device = interface_to_usbdev(interface);
+    blinkDevice = interface_to_usbdev(interface);
 
-    class.name = "usb/blink%d";
-    class.fops = &blinkOps;
-    if ((retVal = usb_register_dev(interface, &class)) < 0)
+    blinkClass.name = "usb/blink%d";
+    blinkClass.fops = &blinkOps;
+    if ((retVal = usb_register_dev(interface, &blinkClass)) < 0)
     {
         /* Something prevented us from registering this driver */
         printk(KERN_ALERT "%s: Not able to get a minor.", DEVICE_NAME);
@@ -197,7 +199,7 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
 
 static void blink_disconnect(struct usb_interface* interface)
 {
-    usb_deregister_dev(interface, &class);
+    usb_deregister_dev(interface, &blinkClass);
     printk(KERN_INFO "%s: blink(1) removed\n", DEVICE_NAME);
     return;
 }

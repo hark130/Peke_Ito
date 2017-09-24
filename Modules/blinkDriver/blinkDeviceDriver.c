@@ -17,7 +17,7 @@
 int blink_open(struct inode *inode, struct file *filp);
 int blink_close(struct inode *inode, struct file *filp);
 ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset);
-static void blink_completion_handler(struct urb urb);
+static void blink_completion_handler(struct urb* urb);
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);
 
@@ -144,14 +144,10 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
         }
         else
         {
-            /*
-            // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint)
             usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
                              virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
-                             blink_completion_handler,
-                             blinkURB->context,
-                             blinkInterval };
-                             */
+                             (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
+
             printk(KERN_INFO "%s: This is where we would be filling in the URB\n", DEVICE_NAME);
 
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
@@ -181,7 +177,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 }
 
 
-static void blink_completion_handler(struct urb urb)
+static void blink_completion_handler(struct urb* urb)
 /* called when data arrives from device (usb-core)*/
 {
     // struct foo *foo = (struct foo *)urb->context;
@@ -226,8 +222,9 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
         printk(KERN_INFO "%s: Endpoint #%d has bmAttributes: %d.\n", DEVICE_NAME, i, retVal);
     }
     /* HARD CODED */
+    // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint)
     blinkPipe = usb_rcvintpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
-    blinkInterval = interface->cur_altsetting->endpoint[0].desc.bEndpointInterval;
+    blinkInterval = interface->cur_altsetting->endpoint[0].desc.bInterval;
     retVal = 0;  // Done messing around with DEBUG statements
 
     blinkClass.name = "usb/blink%d";

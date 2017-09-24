@@ -144,6 +144,7 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
 
 static void blink_disconnect(struct usb_interface* interface)
 {
+    usb_deregister_dev(interface, &class);
     printk(KERN_INFO "%s: blink(1) removed\n", DEVICE_NAME);
     return;
 }

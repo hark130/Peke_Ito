@@ -3,8 +3,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define DEVICE "/dev/blinkDriver"
-#define BUFF_SIZE 100
+#define DEVICE "/dev/blink0"  // /dev/blink%d (%d == minor number)
+#define BUFF_SIZE 8
 
 void eat_a_newline(void);
 
@@ -14,8 +14,8 @@ int main(void)
     int fd;         // File descriptor
 
     char ch = 't';    // User choice
-    char writeBuff[BUFF_SIZE] = {0};
-    char readBuff[BUFF_SIZE] = {0};
+    char writeBuff[BUFF_SIZE + 1] = { 0 };
+    char readBuff[BUFF_SIZE + 1] = { 0 };
 
     fd = open(DEVICE, O_RDWR);
 
@@ -29,6 +29,7 @@ int main(void)
         while(ch != 'q')
         {
             puts("No commands implemented");
+            puts("s = send");
             puts("q = quit");
             puts("Enter command: ");
             ch = getchar();
@@ -39,6 +40,11 @@ int main(void)
                 // Implement commands here
                 // case '?':
                 //     break;
+                case 's':
+                    writeBuff[0] = 'n';     // command code for "set rgb now"
+                    writeBuff[2] = 255;     // Green
+                    write(fd, writeBuff, sizeof(writeBuff));
+                    break;
                 case 'q':
                     puts("Exiting");
                     break;

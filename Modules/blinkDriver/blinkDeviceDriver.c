@@ -144,14 +144,47 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
         }
         else
         {
+            printk(KERN_INFO "%s: Filling in the URB\n", DEVICE_NAME);
             usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
                              virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
                              (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
 
-            printk(KERN_INFO "%s: This is where we would be filling in the URB\n", DEVICE_NAME);
-
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
-            printk(KERN_INFO "%s: This is where we would be submitting the URB\n", DEVICE_NAME);
+            printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
+            retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+            switch(retVal)
+            {
+                case(0):
+                    printk(KERN_INFO "%s: URB successfully completed!\n", DEVICE_NAME);
+                    break;
+                case(-ENOMEM):
+                case(ENOMEM):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Out of memory (-ENOMEM)");
+                    break;
+                case(-ENODEV):
+                case(ENODEV):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Unplugged device (-ENODEV)");
+                    break;
+                case(-EPIPE):
+                case(EPIPE):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Stalled endpoint (-EPIPE)");
+                    break;
+                case(-EAGAIN):
+                case(EAGAIN):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Too many queued ISO transfers (-EAGAIN)");
+                    break;
+                case(-EFBIG):
+                case(EFBIG):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Too many requested ISO frames (-EFBIG)");
+                    break;
+                case(-EINVAL):
+                case(EINVAL):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Invalid INT interval/More than one packet for INT (-EINVAL)");
+                    break;
+                default:
+                    printk(KERN_ALERT "%s: URB returned an unknown error value of: %d!\n", DEVICE_NAME, retVal);
+                    break;
+            }
         }
     }
 

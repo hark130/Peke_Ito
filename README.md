@@ -51,3 +51,6 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [Write/Read USB Device](http://opensourceforu.com/2011/12/data-transfers-to-from-usb-devices/)
 * [USB Device Driver slideshow by Michael Mitchell](ww2.cs.fsu.edu/~stanovic/teaching/ldd_summer_2014/notes/usb/usb_drivers.ppt)
 * Peke_Ito/Kernels/linux-4.4.79/Documentation/usb/URB.txt
+* [Kernel Data Types](http://ww2.cs.fsu.edu/~stanovic/teaching/ldd_summer_2014/notes/lecture_data_types.ppt)
+* [USB Descriptor Tables](http://www.beyondlogic.org/usbnutshell/usb5.shtml)
+* [USB Endpoint Descriptor Details](https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html)

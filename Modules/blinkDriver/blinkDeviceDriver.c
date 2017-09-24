@@ -11,6 +11,7 @@
 #define VENDOR_ID   0x27B8
 #define PRODUCT_ID  0x01ED
 #define BUFF_SIZE 8
+#define MIN(a,b) (((a) <= (b)) ? (a) : (b))
 
 int blink_open(struct inode *inode, struct file *filp);
 int blink_close(struct inode *inode, struct file *filp);
@@ -24,7 +25,8 @@ static void blink_disconnect(struct usb_interface* interface);
 // 1. Create a struct for our fake device
 struct fake_device
 {
-    char data[BUFF_SIZE + 1];  // Holds data from user to device
+    // char data[BUFF_SIZE + 1];   // Holds data from user to device
+    char* transferBuff;         // Allocate memory here to transfer data within the URB
     struct semaphore sem;
 } virtual_device;
 
@@ -62,11 +64,12 @@ struct file_operations blinkOps =
 };
 
 // 6. Other
-static struct usb_device* device;  // ???
+static struct usb_device* blinkDevice;  // ???
 static struct usb_class_driver class;  // ???
 int major_number;       // Will store our major number - extracted from dev_t using macro - mknod /director/file c major minor
 int retVal;             // Will be used to hold return values of functions; this is because the kernel stack is very small
                         //  so declaring variables all over the place in our module functions eats up the stack very fast
+int i;                  // Iterating variable
 
 
 /////////////////////////////////////
@@ -114,7 +117,57 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
     // Send data from user to kernel
     // copy_from_user(dest, source, count)
     printk(KERN_INFO "%s: writing to device\n", DEVICE_NAME);
-    return copy_from_user(virtual_device.data, bufSourceData, BUFF_SIZE);
+
+    else
+    {
+    // Allocate a transfer buffer
+    if((virtual_device.transferBuff = kmalloc(BUFF_SIZE, GFP_KERNEL) == NULL)
+    {
+        retVal = -ENOMEM;
+    }
+    else
+    {
+        // Zeroize the transfer buffer
+        for (i = 0; i < BUFF_SIZE; i++)
+        {
+            virtual_device.transferBuff[i] = 0;
+        }
+
+        // Read data from user space
+        if((retVal = copy_from_user(virtual_device.transferBuff, bufSourceData, MIN(bufCount, BUFF_SIZE))) != 0)
+        {
+            retVal = -EFAULT;
+        }
+        else
+        {
+            usb_fill_int_urb(blinkURB, blinkDevice, // usb_sndintpipe or usb_rcvintpipe
+                             virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), // usb_complete_t complete
+                             // void *context
+                             // int interval
+            };
+            // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
+        }
+    }
+
+
+    // 1. Use the URB to write the data to the device
+    // 2. Test the device by sending hard-coded static data to it
+    // 3. Test the device by programatically sending data to it
+
+    /*
+    // Write the data into the bulk endpoint
+    retval = usb_bulk_msg(device, usb_sndbulkpipe(device, BULK_EP_OUT),
+            bulk_buf, MIN(cnt, MAX_PKT_SIZE), &wrote_cnt, 5000);
+    if (retval)
+    {
+        printk(KERN_ERR "Bulk message returned %d\n", retval);
+        return retval;
+    }
+
+    return wrote_cnt;
+    */
+
+    return retVal;
 }
 
 
@@ -165,13 +218,24 @@ static int __init driver_entry(void)
     // 3. Allocate an URB to use
     blinkURB = usb_alloc_urb(0, 0);
 
+    // 4. Zeroize data
+    // for (i = 0; i <= BUFF_SIZE; i++)
+    // {
+    //     virtual_device.data[i] = 0;
+    // }
+
     return retVal;
 }
 
 
 static void __exit driver_exit(void)
 {
+    // Deallocate the URB
+    usb_free_urb(blinkURB);
+    blinkURB = NULL;
+    // Unregister the device driver
     usb_deregister(&blink_driver);
+    // Log it
     printk(KERN_INFO "%s: unloaded module\n", DEVICE_NAME);
 
     return;

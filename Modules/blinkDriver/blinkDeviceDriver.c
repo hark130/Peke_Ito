@@ -1,5 +1,6 @@
 #include <linux/module.h>       // ALWAYS NEED
 #include <linux/kernel.h>       // ALWAYS NEED
+#include <linux/slab.h>         // kmalloc
 #include <linux/usb.h>          // Always needed for USB descriptors
 // Multi-threading synchronization
 #include <linux/semaphore.h>    // used to access semaphores, synchronization behaviors
@@ -119,11 +120,11 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
     // copy_from_user(dest, source, count)
     printk(KERN_INFO "%s: writing to device\n", DEVICE_NAME);
 
-    else
-    {
     // Allocate a transfer buffer
-    if((virtual_device.transferBuff = kmalloc(BUFF_SIZE, GFP_KERNEL) == NULL)
+    virtual_device.transferBuff = (char*)kmalloc(BUFF_SIZE, GFP_KERNEL);
+    if(virtual_device.transferBuff == NULL)
     {
+        printk(KERN_ERR "%s: Unable to allocate kernel memory for transferBuff!\n", DEVICE_NAME);
         retVal = -ENOMEM;
     }
     else
@@ -141,13 +142,17 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
         }
         else
         {
-            // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint) 
+            /*
+            // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint)
             usb_fill_int_urb(blinkURB, blinkDevice, // usb_sndintpipe or usb_rcvintpipe
                              virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), // usb_complete_t complete
                              // void *context
-                             // int interval
-            };
+                             // int interval };
+                             */
+            printk(KERN_INFO "%s: This is where we would be filling in the URB\n", DEVICE_NAME);
+
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
+            printk(KERN_INFO "%s: This is where we would be submitting the URB\n", DEVICE_NAME);
         }
     }
 

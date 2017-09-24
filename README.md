@@ -14,7 +14,8 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
     2.  sudo rmmod hid_generic
     3.  sudo rmmod usbhid
     4.  sudo rmmod hid_led
-    5.  sudo insmod blinkDeviceDriver.ko
+    5.  sudo rmmod hid
+    6.  sudo insmod blinkDeviceDriver.ko
 
 ## To Do
     [X] Hello World lkm

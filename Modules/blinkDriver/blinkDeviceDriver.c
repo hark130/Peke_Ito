@@ -144,6 +144,11 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
         }
         else
         {
+            for (i = 0; i < BUFF_SIZE; i++)
+            {
+                printk(KERN_INFO "%s: Transfer Buffer[%d] == %d\n", DEVICE_NAME, i, virtual_device.transferBuff[i]);
+            }
+
             printk(KERN_INFO "%s: Filling in the URB\n", DEVICE_NAME);
             usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
                              virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),

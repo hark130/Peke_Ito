@@ -12,6 +12,7 @@
 #define VENDOR_ID   0x27B8
 #define PRODUCT_ID  0x01ED
 #define BUFF_SIZE 8
+#define MILLI_WAIT 10000
 #define MIN(a,b) (((a) <= (b)) ? (a) : (b))
 
 int blink_open(struct inode *inode, struct file *filp);
@@ -29,7 +30,7 @@ struct fake_device
 {
     // char data[BUFF_SIZE + 1];   // Holds data from user to device
     char* transferBuff;         // Allocate memory here to transfer data within the URB
-    struct semaphore sem;
+    // struct semaphore sem;
 } virtual_device;
 
 // 2. Create a usb_device_id struct
@@ -74,6 +75,7 @@ int retVal;                                 // Will be used to hold return value
 int i;                                      // Iterating variable
 unsigned int blinkPipe;                     // The specific endpoint of the USB device to send URBs
 unsigned int blinkInterval;                 // Interval for polling endpoint for data transfers
+int bytesTransferred;                       // usb_interrupt_msg() wants a place to store the actual bytes transferred
 
 
 /////////////////////////////////////
@@ -88,16 +90,17 @@ unsigned int blinkInterval;                 // Interval for polling endpoint for
 int blink_open(struct inode *inode, struct file *filp)
 {
     // Only allow one process to open this device by using a semaphore as mutal exclusive lock - mutext
-    retVal = down_interruptible(&virtual_device.sem);
-    if (retVal != 0)
-    {
-        printk(KERN_ALERT "%s: could not lock device during open\n", DEVICE_NAME);
-        return -1;
-    }
-    else
-    {
-        printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
-    }
+    // retVal = down_interruptible(&virtual_device.sem);
+    // if (retVal != 0)
+    // {
+    //     printk(KERN_ALERT "%s: could not lock device during open\n", DEVICE_NAME);
+    //     return -1;
+    // }
+    // else
+    // {
+    //     printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
+    // }
+    printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
 
     return 0;
 }
@@ -109,7 +112,7 @@ int blink_close(struct inode *inode, struct file *filp)
     // By calling up, which is opposite of down for semaphores, we release
     //  the mutex that we obtained at device open
     // This has the effect of allowing other processes to use the device now
-    up(&virtual_device.sem);
+    // up(&virtual_device.sem);
     printk(KERN_INFO "%s: closed device\n", DEVICE_NAME);
     return 0;
 }
@@ -120,7 +123,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 {
     // Send data from user to kernel
     // copy_from_user(dest, source, count)
-    printk(KERN_INFO "%s: writing to device\n", DEVICE_NAME);
+    printk(KERN_INFO "%s: writing %lu bytes to device\n", DEVICE_NAME, bufCount);
 
     // Allocate a transfer buffer
     virtual_device.transferBuff = (char*)kmalloc(BUFF_SIZE, GFP_KERNEL);
@@ -150,13 +153,20 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             }
 
             printk(KERN_INFO "%s: Filling in the URB\n", DEVICE_NAME);
-            usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
-                             virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
-                             (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
+            /* URB ATTEMPT #1 IS FAILING */
+            // usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
+            //                  virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
+            //                  (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
 
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-            retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+            // retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+            /* TIME FOR URB ATTEMPT #2 */
+            // int usb_interrupt_msg(struct usb_device *usb_dev, unsigned int pipe,
+            // 	void *data, int len, int *actual_length, int timeout);
+            retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
+            printk(KERN_INFO "%s: URB interrupt message transferred %d bytes.\n", DEVICE_NAME, bytesTransferred);
+
             switch(retVal)
             {
                 case(0):
@@ -394,7 +404,7 @@ static void blink_disconnect(struct usb_interface* interface)
 static int __init driver_entry(void)
 {
     // 1. Initialize the semaphore
-    sema_init(&virtual_device.sem, 1);
+    // sema_init(&virtual_device.sem, 1);
 
     // 2. Register this driver with the USB subsystem
     retVal = usb_register(&blink_driver);

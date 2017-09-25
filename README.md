@@ -57,3 +57,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [USB Endpoint Descriptor Details](https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html)
 * [USB Interrupt Transfers in a Nutshell](http://www.beyondlogic.org/usbnutshell/usb4.shtml#Interrupt)
 * [USB Made Simple](http://www.usbmadesimple.co.uk/ums_4.htm)
+* [USB Complete 3rd Edition](http://s.eeweb.com/members/mark_harrington/answers/1333179451-USB_Complete_3rdEdition.pdf)

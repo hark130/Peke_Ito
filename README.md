@@ -33,6 +33,7 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
         * include <linux/sched.h>
         * printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);
         * See: Linux Device Drivers Chapter 2
+    [ ] Read [this](https://www.kernel.org/doc/html/v4.13/driver-api/usb/hotplug.html) to attempt to discover a reason why blinkDeviceDriver is failing to 'hotplug'
 
 ## Resources
 * http://opensourceforu.com/2011/10/usb-drivers-in-linux-1/

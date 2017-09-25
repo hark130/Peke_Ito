@@ -14,8 +14,8 @@ int main(void)
     int fd;         // File descriptor
 
     char ch = 't';    // User choice
-    char writeBuff[BUFF_SIZE + 1] = { 0 };
-    char readBuff[BUFF_SIZE + 1] = { 0 };
+    char writeBuff[BUFF_SIZE] = { 0 };
+    char readBuff[BUFF_SIZE] = { 0 };
 
     fd = open(DEVICE, O_RDWR);
 

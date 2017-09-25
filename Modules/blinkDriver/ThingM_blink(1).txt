@@ -38,14 +38,14 @@ Device Descriptor:
       bInterfaceSubClass      0 No Subclass
       bInterfaceProtocol      0 None
       iInterface              0
-        HID Device Descriptor:
-          bLength                 9
-          bDescriptorType        33
-          bcdHID               1.01
-          bCountryCode            0 Not supported
-          bNumDescriptors         1
-          bDescriptorType        34 Report
-          wDescriptorLength      24
+        HID Device Descriptor:  // Identifies additional descriptors for HID communications (USB Complete P. 326)
+          bLength                 9  // Descriptor size in bytes
+          bDescriptorType        33  // This descriptor's type: 0x21 to indicate HID class
+          bcdHID               1.01  // HID specification release number
+          bCountryCode            0 Not supported  // Identifies countries for localized hardware
+          bNumDescriptors         1  // Number of subordinate report and physical descriptors
+          bDescriptorType        34 Report  // Type of a class-specific descriptor that follows (0x22, Report, is required)
+          wDescriptorLength      24  // Total length of the descriptor identified above
          Report Descriptors:
            ** UNAVAILABLE **
       Endpoint Descriptor:  // Describes how the data is transmitted

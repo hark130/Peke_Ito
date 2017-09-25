@@ -11,7 +11,7 @@
 // Get these values from 'lsusb -v'
 #define VENDOR_ID   0x27B8
 #define PRODUCT_ID  0x01ED
-#define BUFF_SIZE 8
+#define BUFF_SIZE 9
 #define MILLI_WAIT 10000
 #define MIN(a,b) (((a) <= (b)) ? (a) : (b))
 
@@ -76,6 +76,7 @@ int i;                                      // Iterating variable
 unsigned int blinkPipe;                     // The specific endpoint of the USB device to send URBs
 unsigned int blinkInterval;                 // Interval for polling endpoint for data transfers
 int bytesTransferred;                       // usb_interrupt_msg() wants a place to store the actual bytes transferred
+__le16 maxPacketSize;                       // wMaxPacketSize of the endpoint
 
 
 /////////////////////////////////////
@@ -161,10 +162,22 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
             // retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+
+            /* TIME FOR URB ATTEMPT #3 */
+            // int usb_control_msg(struct usb_device *dev, unsigned int pipe,
+            //                     _ _u8 request, _ _u8 requesttype,
+            //                     _ _u16 value, _ _u16 index,
+            //                     void *data, _ _u16 size, int timeout);
+            retVal = usb_control_msg(blinkDevice, blinkPipe, 3, 2, 0, 0, virtual_device.transferBuff, maxPacketSize, MILLI_WAIT);
+            // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
+            printk(KERN_INFO "%s: USB control message returned: %d.\n", DEVICE_NAME, retVal);
+            retVal = 0;
+
             /* TIME FOR URB ATTEMPT #2 */
             // int usb_interrupt_msg(struct usb_device *usb_dev, unsigned int pipe,
             // 	void *data, int len, int *actual_length, int timeout);
-            retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
+            retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, maxPacketSize, &bytesTransferred, MILLI_WAIT);
+            // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
             printk(KERN_INFO "%s: URB interrupt message transferred %d bytes.\n", DEVICE_NAME, bytesTransferred);
 
             switch(retVal)
@@ -229,6 +242,9 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
                     break;
                 case(-EFBIG):
                     printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Too many requested ISO frames (-EFBIG)");
+                    break;
+                case(-ETIMEDOUT):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Connection timed out (-ETIMEDOUT)");
                     break;
                 default:
                     printk(KERN_ALERT "%s: URB returned an unknown error value of: %d!\n", DEVICE_NAME, retVal);
@@ -339,6 +355,9 @@ static void blink_completion_handler(struct urb* urb)
                 case(-EFBIG):
                     printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Too many requested ISO frames (-EFBIG)");
                     break;
+                case(-ETIMEDOUT):
+                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Connection timed out (-ETIMEDOUT)");
+                    break;
                 default:
                     printk(KERN_ALERT "%s: URB completion handler returned an unknown error value of: %d!\n", DEVICE_NAME, retVal);
                     break;
@@ -356,6 +375,7 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
     blinkDevice = interface_to_usbdev(interface);
 
     /* ATTEMPTINT TO FIND ENDPOINT */
+    printk(KERN_INFO "%s: This interface has %u different settings.\n", DEVICE_NAME, interface->num_altsetting);
     retVal |= interface->cur_altsetting->desc.bNumEndpoints;  // Number of endpoints for this interface
     printk(KERN_INFO "%s: This interface has %d endpoints.\n", DEVICE_NAME, retVal);
     for (i = 0; i < interface->cur_altsetting->desc.bNumEndpoints; i++)
@@ -374,6 +394,7 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
     // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint)
     blinkPipe = usb_rcvintpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
     blinkInterval = interface->cur_altsetting->endpoint[0].desc.bInterval;
+    maxPacketSize = interface->cur_altsetting->endpoint[0].desc.wMaxPacketSize;
     retVal = 0;  // Done messing around with DEBUG statements
 
     blinkClass.name = "usb/blink%d";
@@ -466,3 +487,20 @@ MODULE_VERSION("0.1");  // Not yet releasable
 // 'S';   // command code for "read play state"
 // 'P';   // command code for "write pattern line"
 // 'R';   // command code for "read pattern line n"
+
+/*
+- Fade to RGB color       format: { 1, 'c', r,g,b,     th,tl, n } (*)
+- Set RGB color now       format: { 1, 'n', r,g,b,       0,0, 0 }
+- Read current RGB color  format: { 1, 'r', 0,0,0,       0,0, n } (2)
+- Serverdown tickle/off   format: { 1, 'D', on,th,tl,  st,sp,ep } (*)
+- Play/Pause              format: { 1, 'p', on,sp,0,     0,0, 0 }
+- PlayLoop                format: { 1, 'p', on,sp,ep,c,    0, 0 } (2)
+- Playstate readback      format: { 1, 'S', 0,0,0,       0,0, 0 } (2)
+- Set color pattern line  format: { 1, 'P', r,g,b,     th,tl, p }
+- read color pattern line format: { 1, 'R', 0,0,0,       0,0, p }
+- Save color patterns     format: { 1, 'W', 0xBE,0xEF,0xCA,0xFE,0, 0 } (2)
+- Read EEPROM location    format: { 1, 'e', ad,0,0,      0,0, 0 } (1)
+- Write EEPROM location   format: { 1, 'E', ad,v,0,      0,0, 0 } (1)
+- Get version             format: { 1, 'v', 0,0,0,       0,0, 0 }
+- Test command            format: { 1, '!', 0,0,0,       0,0, 0 }
+ */

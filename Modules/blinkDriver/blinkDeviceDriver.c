@@ -155,30 +155,32 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 
             printk(KERN_INFO "%s: Filling in the URB\n", DEVICE_NAME);
             /* URB ATTEMPT #1 IS FAILING */
-            // usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
-            //                  virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
-            //                  (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
+            usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
+                             virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
+                             (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
 
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-            // retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+            retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
 
             /* TIME FOR URB ATTEMPT #3 */
             // int usb_control_msg(struct usb_device *dev, unsigned int pipe,
             //                     _ _u8 request, _ _u8 requesttype,
             //                     _ _u16 value, _ _u16 index,
             //                     void *data, _ _u16 size, int timeout);
-            retVal = usb_control_msg(blinkDevice, blinkPipe, 3, 2, 0, 0, virtual_device.transferBuff, maxPacketSize, MILLI_WAIT);
+            // retVal = usb_control_msg(blinkDevice, blinkPipe, 2, 3, 0, 0, virtual_device.transferBuff, maxPacketSize, MILLI_WAIT);
+            // retVal = usb_control_msg(blinkDevice, blinkPipe, 3, 2, 0, 0, virtual_device.transferBuff, maxPacketSize, MILLI_WAIT);
+            // retVal = usb_control_msg(blinkDevice, blinkPipe, 3, 2, 0, 0, virtual_device.transferBuff, 8, MILLI_WAIT);
             // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
-            printk(KERN_INFO "%s: USB control message returned: %d.\n", DEVICE_NAME, retVal);
-            retVal = 0;
+            // printk(KERN_INFO "%s: USB control message returned: %d.\n", DEVICE_NAME, retVal);
+            // retVal = 0;
 
             /* TIME FOR URB ATTEMPT #2 */
             // int usb_interrupt_msg(struct usb_device *usb_dev, unsigned int pipe,
             // 	void *data, int len, int *actual_length, int timeout);
-            retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, maxPacketSize, &bytesTransferred, MILLI_WAIT);
+            // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, maxPacketSize, &bytesTransferred, MILLI_WAIT);
             // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
-            printk(KERN_INFO "%s: URB interrupt message transferred %d bytes.\n", DEVICE_NAME, bytesTransferred);
+            // printk(KERN_INFO "%s: URB interrupt message transferred %d bytes.\n", DEVICE_NAME, bytesTransferred);
 
             switch(retVal)
             {

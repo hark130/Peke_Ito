@@ -160,7 +160,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             switch(retVal)
             {
                 case(0):
-                    printk(KERN_INFO "%s: URB successfully completed?\n", DEVICE_NAME);
+                    printk(KERN_INFO "%s: URB successfully completed!\n", DEVICE_NAME);
                     break;
                 case(-ENOENT):
                     printk(KERN_INFO "%s: URB successfully completed?\n", DEVICE_NAME);
@@ -266,6 +266,73 @@ static void blink_completion_handler(struct urb* urb)
         default:
             /* handle error */
             printk(KERN_ERR "%s: The completion handler experienced an error status of %d.\n", DEVICE_NAME, urb->status);
+            switch(urb->status)
+            {
+                case(0):
+                    printk(KERN_INFO "%s: URB completion handler successfully completed!\n", DEVICE_NAME);
+                    break;
+                case(-ENOENT):
+                    printk(KERN_INFO "%s: URB completion handler successfully completed?\n", DEVICE_NAME);
+                    printk(KERN_INFO "%s: The URB completion handler reported %s.\n", DEVICE_NAME, "The urb was stopped by a call to usb_kill_urb (-ENOENT)");
+                    break;
+                case(-ECONNRESET):
+                    printk(KERN_INFO "%s: URB completion handler successfully completed?\n", DEVICE_NAME);
+                    printk(KERN_INFO "%s: The URB completion handler reported %s.\n", DEVICE_NAME, "The urb was unlinked by a call to usb_unlink_urb (-ECONNRESET)");
+                    break;
+                case(-ESHUTDOWN):
+                    printk(KERN_INFO "%s: URB completion handler successfully completed?\n", DEVICE_NAME);
+                    printk(KERN_INFO "%s: The URB completion handler reported %s.\n", DEVICE_NAME, "There was a severe error with the USB host controller driver (-ESHUTDOWN)");
+                    break;
+                case(-EINPROGRESS):
+                    printk(KERN_ALERT "%s: The URB completion handler returned %s!\n", DEVICE_NAME, "The urb is still being processed by the USB host controllers (-EINPROGRESS)");
+                    break;
+                case(-EPROTO):
+                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
+                    printk(KERN_ALERT "%s: The URB completion handler returned %s!\n", DEVICE_NAME, "A bitstuff error happened during transfer or no response packet was received by the hardware (-EPROTO)");
+                    break;
+                case(-EILSEQ):
+                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
+                    printk(KERN_ALERT "%s: The URB completion handler returned %s!\n", DEVICE_NAME, "There was a CRC mismatch in the urb transfer (-EILSEQ)");
+                    break;
+                case(-EPIPE):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Stalled endpoint (-EPIPE)");
+                    break;
+                case(-ECOMM):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Data was received too fast to be written to system memory (-ECOMM)");
+                    break;
+                case(-ENOSR):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Data retrieval was to slow for the USB data rate (-ENOSR)");
+                    break;
+                case(-EOVERFLOW):
+                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "A 'babble' error happened to the URB (-EOVERFLOW)");
+                    break;
+                case(-EREMOTEIO):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Full amount of data was not received (-EREMOTEIO)");
+                    break;
+                case(-ENODEV):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Unplugged device (-ENODEV)");
+                    break;
+                case(-EXDEV):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Transfer was only partially completed (-EXDEV)");
+                    break;
+                case(-EINVAL):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Something very bad happened with the URB. Log off and go home. (-EINVAL)");
+                    break;
+                // These last three cases don't show up in Linux Device Drivers 3rd Edition but I found them somewhere
+                case(-ENOMEM):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Out of memory (-ENOMEM)");
+                    break;
+                case(-EAGAIN):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Too many queued ISO transfers (-EAGAIN)");
+                    break;
+                case(-EFBIG):
+                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Too many requested ISO frames (-EFBIG)");
+                    break;
+                default:
+                    printk(KERN_ALERT "%s: URB completion handler returned an unknown error value of: %d!\n", DEVICE_NAME, retVal);
+                    break;
+            }
             break;
     }
 }

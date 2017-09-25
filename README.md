@@ -55,3 +55,5 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [Kernel Data Types](http://ww2.cs.fsu.edu/~stanovic/teaching/ldd_summer_2014/notes/lecture_data_types.ppt)
 * [USB Descriptor Tables](http://www.beyondlogic.org/usbnutshell/usb5.shtml)
 * [USB Endpoint Descriptor Details](https://www.keil.com/pack/doc/mw/USB/html/_u_s_b__endpoint__descriptor.html)
+* [USB Interrupt Transfers in a Nutshell](http://www.beyondlogic.org/usbnutshell/usb4.shtml#Interrupt)
+* [USB Made Simple](http://www.usbmadesimple.co.uk/ums_4.htm)

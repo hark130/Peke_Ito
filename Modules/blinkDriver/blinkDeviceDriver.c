@@ -105,7 +105,8 @@ int major_number;                           // Will store our major number - ext
 int retVal;                                 // Will be used to hold return values of functions; this is because the kernel stack is very small
                                             //  so declaring variables all over the place in our module functions eats up the stack very fast
 int i;                                      // Iterating variable
-unsigned int blinkPipe;                     // The specific endpoint of the USB device to send URBs
+unsigned int blinkPipe;                     // The specific endpoint of the USB device to send Interrupt URBs
+unsigned int blinkPipe_Control;             // The specific endpoint of the USB device to send Control URBs
 unsigned int blinkInterval;                 // Interval for polling endpoint for data transfers
 int bytesTransferred;                       // usb_interrupt_msg() wants a place to store the actual bytes transferred
 __le16 maxPacketSize;                       // wMaxPacketSize of the endpoint
@@ -195,6 +196,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             // 				      usb_complete_t complete_fn,
             // 				      void *context,
             // 				      int interval)
+            printk(KERN_INFO "%s: usb_fill_int_urb - Using pipe #%d.\n", DEVICE_NAME, blinkPipe);
             usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
                              NULL, 0, (usb_complete_t)blink_completion_handler,
                              blinkURB->context, blinkInterval);
@@ -237,7 +239,8 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             {
                 printk(KERN_INFO "%s: Setup Packet Buffer[%d] == %d (0x%X)\n", DEVICE_NAME, i, virtual_device.setupPacket[i], virtual_device.setupPacket[i]);
             }
-            usb_fill_control_urb(blinkURB_Control, blinkDevice, blinkPipe,
+            printk(KERN_INFO "%s: usb_fill_control_urb - Using pipe #%d.\n", DEVICE_NAME, blinkPipe_Control);
+            usb_fill_control_urb(blinkURB_Control, blinkDevice, blinkPipe_Control,
                                  virtual_device.setupPacket, virtual_device.transferBuff, bufCount,
                                  (usb_complete_t)blink_completion_handler, blinkURB_Control->context);
             retVal = usb_submit_urb(blinkURB_Control, GFP_KERNEL);
@@ -328,6 +331,8 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
     /* HARD CODED */
     // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint)
     blinkPipe = usb_rcvintpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
+    // unsigned int usb_rcvctrlpipe(struct usb_device *dev, unsigned int endpoint)
+    blinkPipe_Control = usb_rcvctrlpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
     blinkInterval = interface->cur_altsetting->endpoint[0].desc.bInterval;
     maxPacketSize = interface->cur_altsetting->endpoint[0].desc.wMaxPacketSize;
     retVal = 0;  // Done messing around with DEBUG statements

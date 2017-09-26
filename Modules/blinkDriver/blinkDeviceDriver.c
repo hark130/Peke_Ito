@@ -155,15 +155,24 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             }
 
             printk(KERN_INFO "%s: Filling in the URB\n", DEVICE_NAME);
-            /* URB ATTEMPT #1 IS FAILING */
+            /* ATTTEMPT #4... Send a URB and then a HID SET_REPORT*/
             usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
-                             virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
-                             (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
+                             NULL, 0, (usb_complete_t)blink_completion_handler,
+                             blinkURB->context, blinkInterval);
+             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
+             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
+             retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+             log_return_value("blink_write", retVal);
 
-            // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
-            printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-            retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
-            log_return_value("blink_write", retVal);
+            /* URB ATTEMPT #1 IS FAILING */
+            // usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
+            //                  virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE),
+            //                  (usb_complete_t)blink_completion_handler, blinkURB->context, blinkInterval);
+
+            // // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
+            // printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
+            // retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+            // log_return_value("blink_write", retVal);
             /* TIME FOR URB ATTEMPT #3 */
             // int usb_control_msg(struct usb_device *dev, unsigned int pipe,
             //                     _ _u8 request, _ _u8 requesttype,

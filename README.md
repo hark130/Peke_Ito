@@ -28,6 +28,7 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
         [ ] Send data w/ usb_submit_urb() (Probe?  New function?)
         [ ] Handle URB Completion (see: Ch 13 - Completing Urbs: The Completion Callback Handler)
         [ ] NOTE: Continue reading Ch 13 at "Writing a USB Driver"
+        [ ] Dynamically read in the three strings (Make, Model, Serial #)
     [ ] "Unk" USB Device Driver (Nerf-style turret)
     [ ] Manage concurrent execution
         * include <linux/sched.h>

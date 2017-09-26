@@ -61,3 +61,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [USB Complete 3rd Edition](http://s.eeweb.com/members/mark_harrington/answers/1333179451-USB_Complete_3rdEdition.pdf)
 * [USB HID Report Descriptors](http://eleccelerator.com/tutorial-about-usb-hid-report-descriptors/)
 * [Reverse Engineering SET_REPORT Packets](https://hackaday.io/project/5301/logs)
+* [Universal Serial Bus Specification v2.0](sdphca.ucsd.edu/lab_equip_manuals/usb_20.pdf)

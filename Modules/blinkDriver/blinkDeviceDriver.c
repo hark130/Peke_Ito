@@ -21,6 +21,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 static void blink_completion_handler(struct urb* urb);
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);
+void log_return_value(char* functionName, int retVal);
 
 ////////////////////////////////
 /* DEFINE NECESSARY VARIABLES */
@@ -162,7 +163,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
             retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
-
+            log_return_value("blink_write", retVal);
             /* TIME FOR URB ATTEMPT #3 */
             // int usb_control_msg(struct usb_device *dev, unsigned int pipe,
             //                     _ _u8 request, _ _u8 requesttype,
@@ -182,76 +183,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
             // printk(KERN_INFO "%s: URB interrupt message transferred %d bytes.\n", DEVICE_NAME, bytesTransferred);
 
-            switch(retVal)
-            {
-                case(0):
-                    printk(KERN_INFO "%s: URB successfully completed!\n", DEVICE_NAME);
-                    break;
-                case(-ENOENT):
-                    printk(KERN_INFO "%s: URB successfully completed?\n", DEVICE_NAME);
-                    printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "The urb was stopped by a call to usb_kill_urb (-ENOENT)");
-                    break;
-                case(-ECONNRESET):
-                    printk(KERN_INFO "%s: URB successfully completed?\n", DEVICE_NAME);
-                    printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "The urb was unlinked by a call to usb_unlink_urb (-ECONNRESET)");
-                    break;
-                case(-ESHUTDOWN):
-                    printk(KERN_INFO "%s: URB successfully completed?\n", DEVICE_NAME);
-                    printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "There was a severe error with the USB host controller driver (-ESHUTDOWN)");
-                    break;
-                case(-EINPROGRESS):
-                    printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "The urb is still being processed by the USB host controllers (-EINPROGRESS)");
-                    break;
-                case(-EPROTO):
-                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
-                    printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "A bitstuff error happened during transfer or no response packet was received by the hardware (-EPROTO)");
-                    break;
-                case(-EILSEQ):
-                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
-                    printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "There was a CRC mismatch in the urb transfer (-EILSEQ)");
-                    break;
-                case(-EPIPE):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Stalled endpoint (-EPIPE)");
-                    break;
-                case(-ECOMM):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Data was received too fast to be written to system memory (-ECOMM)");
-                    break;
-                case(-ENOSR):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Data retrieval was to slow for the USB data rate (-ENOSR)");
-                    break;
-                case(-EOVERFLOW):
-                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "A 'babble' error happened to the URB (-EOVERFLOW)");
-                    break;
-                case(-EREMOTEIO):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Full amount of data was not received (-EREMOTEIO)");
-                    break;
-                case(-ENODEV):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Unplugged device (-ENODEV)");
-                    break;
-                case(-EXDEV):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Transfer was only partially completed (-EXDEV)");
-                    break;
-                case(-EINVAL):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Something very bad happened with the URB. Log off and go home. (-EINVAL)");
-                    break;
-                // These last three cases don't show up in Linux Device Drivers 3rd Edition but I found them somewhere
-                case(-ENOMEM):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Out of memory (-ENOMEM)");
-                    break;
-                case(-EAGAIN):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Too many queued ISO transfers (-EAGAIN)");
-                    break;
-                case(-EFBIG):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Too many requested ISO frames (-EFBIG)");
-                    break;
-                case(-ETIMEDOUT):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Connection timed out (-ETIMEDOUT)");
-                    break;
-                default:
-                    printk(KERN_ALERT "%s: URB returned an unknown error value of: %d!\n", DEVICE_NAME, retVal);
-                    break;
-            }
+
         }
     }
 
@@ -280,92 +212,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 static void blink_completion_handler(struct urb* urb)
 /* called when data arrives from device (usb-core)*/
 {
-    // struct foo *foo = (struct foo *)urb->context;
-    // unsigned char* data = foo->data;  /* the data from the device */
-    // struct input_dev *input_dev = foo->inputdev;
-    switch(urb->status)
-    {
-        case 0:
-            /* success, first process data, then send keys, abs/rel, events */
-            // input_report_abs(input_dev, type, code, value);  // NOT SURE WHAT THIS DOES
-            /* and/or input_event(), input_report_rel(), input_report_key() */
-            printk(KERN_INFO "%s: The completion handler was successful.\n", DEVICE_NAME);
-            break;
-        default:
-            /* handle error */
-            printk(KERN_ERR "%s: The completion handler experienced an error status of %d.\n", DEVICE_NAME, urb->status);
-            switch(urb->status)
-            {
-                case(0):
-                    printk(KERN_INFO "%s: URB completion handler successfully completed!\n", DEVICE_NAME);
-                    break;
-                case(-ENOENT):
-                    printk(KERN_INFO "%s: URB completion handler successfully completed?\n", DEVICE_NAME);
-                    printk(KERN_INFO "%s: The URB completion handler reported %s.\n", DEVICE_NAME, "The urb was stopped by a call to usb_kill_urb (-ENOENT)");
-                    break;
-                case(-ECONNRESET):
-                    printk(KERN_INFO "%s: URB completion handler successfully completed?\n", DEVICE_NAME);
-                    printk(KERN_INFO "%s: The URB completion handler reported %s.\n", DEVICE_NAME, "The urb was unlinked by a call to usb_unlink_urb (-ECONNRESET)");
-                    break;
-                case(-ESHUTDOWN):
-                    printk(KERN_INFO "%s: URB completion handler successfully completed?\n", DEVICE_NAME);
-                    printk(KERN_INFO "%s: The URB completion handler reported %s.\n", DEVICE_NAME, "There was a severe error with the USB host controller driver (-ESHUTDOWN)");
-                    break;
-                case(-EINPROGRESS):
-                    printk(KERN_ALERT "%s: The URB completion handler returned %s!\n", DEVICE_NAME, "The urb is still being processed by the USB host controllers (-EINPROGRESS)");
-                    break;
-                case(-EPROTO):
-                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
-                    printk(KERN_ALERT "%s: The URB completion handler returned %s!\n", DEVICE_NAME, "A bitstuff error happened during transfer or no response packet was received by the hardware (-EPROTO)");
-                    break;
-                case(-EILSEQ):
-                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
-                    printk(KERN_ALERT "%s: The URB completion handler returned %s!\n", DEVICE_NAME, "There was a CRC mismatch in the urb transfer (-EILSEQ)");
-                    break;
-                case(-EPIPE):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Stalled endpoint (-EPIPE)");
-                    break;
-                case(-ECOMM):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Data was received too fast to be written to system memory (-ECOMM)");
-                    break;
-                case(-ENOSR):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Data retrieval was to slow for the USB data rate (-ENOSR)");
-                    break;
-                case(-EOVERFLOW):
-                    printk(KERN_ALERT "%s: There may be hardware problems with the device!\n", DEVICE_NAME);
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "A 'babble' error happened to the URB (-EOVERFLOW)");
-                    break;
-                case(-EREMOTEIO):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Full amount of data was not received (-EREMOTEIO)");
-                    break;
-                case(-ENODEV):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Unplugged device (-ENODEV)");
-                    break;
-                case(-EXDEV):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Transfer was only partially completed (-EXDEV)");
-                    break;
-                case(-EINVAL):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Something very bad happened with the URB. Log off and go home. (-EINVAL)");
-                    break;
-                // These last three cases don't show up in Linux Device Drivers 3rd Edition but I found them somewhere
-                case(-ENOMEM):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Out of memory (-ENOMEM)");
-                    break;
-                case(-EAGAIN):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Too many queued ISO transfers (-EAGAIN)");
-                    break;
-                case(-EFBIG):
-                    printk(KERN_ALERT "%s: URB completion handler returned: %s!\n", DEVICE_NAME, "Too many requested ISO frames (-EFBIG)");
-                    break;
-                case(-ETIMEDOUT):
-                    printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "Connection timed out (-ETIMEDOUT)");
-                    break;
-                default:
-                    printk(KERN_ALERT "%s: URB completion handler returned an unknown error value of: %d!\n", DEVICE_NAME, retVal);
-                    break;
-            }
-            break;
-    }
+    log_return_value("blink_completion_handler", urb->status);
 }
 
 
@@ -421,6 +268,93 @@ static void blink_disconnect(struct usb_interface* interface)
     usb_deregister_dev(interface, &blinkClass);
     printk(KERN_INFO "%s: blink(1) removed\n", DEVICE_NAME);
     return;
+}
+
+
+void log_return_value(char* functionName, int retVal)
+{
+    char* funcName = NULL;
+    char blankString[1] = { 0 };
+
+    if (!functionName)
+    {
+        funcName = blankString;
+    }
+    else
+    {
+        funcName = functionName;
+    }
+
+    switch(retVal)
+    {
+        case(0):
+            printk(KERN_INFO "%s: %s URB successfully completed!\n", DEVICE_NAME, funcName);
+            break;
+        case(-ENOENT):
+            printk(KERN_INFO "%s: %s URB successfully completed?\n", DEVICE_NAME, funcName);
+            printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "The urb was stopped by a call to usb_kill_urb (-ENOENT)");
+            break;
+        case(-ECONNRESET):
+            printk(KERN_INFO "%s: %s URB successfully completed?\n", DEVICE_NAME, funcName);
+            printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "The urb was unlinked by a call to usb_unlink_urb (-ECONNRESET)");
+            break;
+        case(-ESHUTDOWN):
+            printk(KERN_INFO "%s: %s URB successfully completed?\n", DEVICE_NAME, funcName);
+            printk(KERN_INFO "%s: The URB reported %s.\n", DEVICE_NAME, "There was a severe error with the USB host controller driver (-ESHUTDOWN)");
+            break;
+        case(-EINPROGRESS):
+            printk(KERN_ALERT "%s: %s The URB returned %s!\n", DEVICE_NAME, funcName, "The urb is still being processed by the USB host controllers (-EINPROGRESS)");
+            break;
+        case(-EPROTO):
+            printk(KERN_ALERT "%s: %s There may be hardware problems with the device!\n", DEVICE_NAME, funcName);
+            printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "A bitstuff error happened during transfer or no response packet was received by the hardware (-EPROTO)");
+            break;
+        case(-EILSEQ):
+            printk(KERN_ALERT "%s: %s There may be hardware problems with the device!\n", DEVICE_NAME, funcName);
+            printk(KERN_ALERT "%s: The URB returned %s!\n", DEVICE_NAME, "There was a CRC mismatch in the urb transfer (-EILSEQ)");
+            break;
+        case(-EPIPE):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Stalled endpoint (-EPIPE)");
+            break;
+        case(-ECOMM):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Data was received too fast to be written to system memory (-ECOMM)");
+            break;
+        case(-ENOSR):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Data retrieval was to slow for the USB data rate (-ENOSR)");
+            break;
+        case(-EOVERFLOW):
+            printk(KERN_ALERT "%s: %s There may be hardware problems with the device!\n", DEVICE_NAME, funcName);
+            printk(KERN_ALERT "%s: URB returned: %s!\n", DEVICE_NAME, "A 'babble' error happened to the URB (-EOVERFLOW)");
+            break;
+        case(-EREMOTEIO):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Full amount of data was not received (-EREMOTEIO)");
+            break;
+        case(-ENODEV):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Unplugged device (-ENODEV)");
+            break;
+        case(-EXDEV):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Transfer was only partially completed (-EXDEV)");
+            break;
+        case(-EINVAL):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Something very bad happened with the URB. Log off and go home. (-EINVAL)");
+            break;
+        // These last three cases don't show up in Linux Device Drivers 3rd Edition but I found them somewhere
+        case(-ENOMEM):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Out of memory (-ENOMEM)");
+            break;
+        case(-EAGAIN):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Too many queued ISO transfers (-EAGAIN)");
+            break;
+        case(-EFBIG):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Too many requested ISO frames (-EFBIG)");
+            break;
+        case(-ETIMEDOUT):
+            printk(KERN_ALERT "%s: %s URB returned: %s!\n", DEVICE_NAME, funcName, "Connection timed out (-ETIMEDOUT)");
+            break;
+        default:
+            printk(KERN_ALERT "%s: %s URB returned an unknown error value of: %d!\n", DEVICE_NAME, funcName, retVal);
+            break;
+    }
 }
 
 

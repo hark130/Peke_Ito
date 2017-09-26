@@ -59,3 +59,5 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [USB Interrupt Transfers in a Nutshell](http://www.beyondlogic.org/usbnutshell/usb4.shtml#Interrupt)
 * [USB Made Simple](http://www.usbmadesimple.co.uk/ums_4.htm)
 * [USB Complete 3rd Edition](http://s.eeweb.com/members/mark_harrington/answers/1333179451-USB_Complete_3rdEdition.pdf)
+* [USB HID Report Descriptors](http://eleccelerator.com/tutorial-about-usb-hid-report-descriptors/)
+* [Reverse Engineering SET_REPORT Packets](https://hackaday.io/project/5301/logs)

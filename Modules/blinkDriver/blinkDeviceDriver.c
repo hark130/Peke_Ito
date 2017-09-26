@@ -15,6 +15,35 @@
 #define MILLI_WAIT 10000
 #define MIN(a,b) (((a) <= (b)) ? (a) : (b))
 
+/* SETUP PACKET MACROS */
+/* bmRequestTypes */
+// Recipient
+#define SP_RT_RCPT_DEVICE 0x0       // Device
+#define SP_RT_RCPT_INTRFC 0x1       // Interface
+#define SP_RT_RCPT_ENDPNT 0x2       // Endpoint
+#define SP_RT_RCPT_OTHER 0x3        // Other
+// Type
+#define SP_RT_TYPE_STNRD 0x0       // Standard
+#define SP_RT_TYPE_CLASS 0x1 << 5  // Class
+#define SP_RT_TYPE_VENDR 0x2 << 5  // Vendor
+#define SP_RT_TYPE_RSVRD 0x3 << 5  // Reserved
+// Data Phase Transfer Direction
+#define SP_RT_DPTD_H2D 0x0          // Host to Device
+#define SP_RT_DPTD_D2H 0x1 << 7     // Device to Host
+/* bRequest */
+#define SP_RQST_GET_STATUS 0x0
+#define SP_RQST_CLEAR_FEATURE 0x1
+#define SP_RQST_SET_FEATURE 0x3
+#define SP_RQST_SET_ADDRESS 0x5
+#define SP_RQST_GET_DESCRIPTOR 0x6
+#define SP_RQST_SET_DESCRIPTOR 0x7
+#define SP_RQST_GET_CONFIG 0x8
+#define SP_RQST_SET_CONFIG 0x9
+#define SP_RQST_GET_INTERFACE 0xA
+#define SP_RQST_SET_INTERFACE 0xB
+#define SP_RQST_SYNCH_FRAME 0xC
+
+
 int blink_open(struct inode *inode, struct file *filp);
 int blink_close(struct inode *inode, struct file *filp);
 ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset);
@@ -31,6 +60,7 @@ struct fake_device
 {
     // char data[BUFF_SIZE + 1];   // Holds data from user to device
     char* transferBuff;         // Allocate memory here to transfer data within the URB
+    char setupPacket[8];
     // struct semaphore sem;
 } virtual_device;
 
@@ -55,6 +85,7 @@ static struct usb_driver blink_driver =
 
 // 4. USB Request Block pointer
 struct urb* blinkURB = NULL;
+struct urb* blinkURB_Control = NULL;
 
 // 5. Define file operations
 // This tells the kernel which functions to call when a user operates on our device file_operations
@@ -143,7 +174,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
         }
 
         // Read data from user space
-        if((retVal = copy_from_user(virtual_device.transferBuff, bufSourceData, MIN(bufCount, BUFF_SIZE))) != 0)
+        if((retVal = copy_from_user(virtual_device.transferBuff, bufSourceData, bufCount)) != 0)
         {
             retVal = -EFAULT;
         }
@@ -155,14 +186,62 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             }
 
             printk(KERN_INFO "%s: Filling in the URB\n", DEVICE_NAME);
-            /* ATTTEMPT #4... Send a URB and then a HID SET_REPORT*/
+            /* ATTTEMPT #4... Send a URB and then a HID SET_REPORT */
+            // void usb_fill_int_urb(struct urb *urb,
+            // 				      struct usb_device *dev,
+            // 			  	      unsigned int pipe,
+            // 				      void *transfer_buffer,
+            // 				      int buffer_length,
+            // 				      usb_complete_t complete_fn,
+            // 				      void *context,
+            // 				      int interval)
             usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
                              NULL, 0, (usb_complete_t)blink_completion_handler,
                              blinkURB->context, blinkInterval);
-             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
-             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-             retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
-             log_return_value("blink_write", retVal);
+            // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
+            printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
+            retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+            log_return_value("blink_write - INT URB", retVal);
+
+            /* ATTEMPT #4.1 */
+            // int usb_control_msg(struct usb_device *dev, unsigned int pipe,
+            //                     _ _u8 request, _ _u8 requesttype,
+            //                     _ _u16 value, _ _u16 index,
+            //                     void *data, _ _u16 size, int timeout);
+            //  retVal = usb_control_msg(blinkDevice, blinkPipe,
+            //                           9, 33,
+            //                           0x0301, 0,
+            //                           virtual_device.transferBuff, bufCount, MILLI_WAIT);
+                                      // NOTE: 0x0301 == __u16 value == 0000 0011 0000 0001
+                                      //                                Rprt Type Report ID
+                                      //                                3         1
+            /* ATTEMPT #4.2 */
+            // void usb_fill_control_urb(struct urb *urb,
+            //     				      struct usb_device *dev,
+            //     				      unsigned int pipe,
+            //     					  unsigned char *setup_packet,
+            //     					  void *transfer_buffer,
+            //     					  int buffer_length,
+            //     					  usb_complete_t complete_fn,
+            //     					  void *context)
+            // Create setupPacket
+            virtual_device.setupPacket[0] = SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC;  // bmRequestType
+            virtual_device.setupPacket[1] = SP_RQST_SET_CONFIG;  // bRequest
+            virtual_device.setupPacket[2] = 1; // wValue ReportID
+            virtual_device.setupPacket[3] = 3; // wValue ReportType
+            virtual_device.setupPacket[4] = 0; // wIndex
+            virtual_device.setupPacket[5] = 0; // wIndex
+            virtual_device.setupPacket[6] = 9; // wLength
+            virtual_device.setupPacket[7] = 0; // wLength
+            for (i = 0; i < 8; i++)
+            {
+                printk(KERN_INFO "%s: Setup Packet Buffer[%d] == %d (0x%X)\n", DEVICE_NAME, i, virtual_device.setupPacket[i], virtual_device.setupPacket[i]);
+            }
+            usb_fill_control_urb(blinkURB_Control, blinkDevice, blinkPipe,
+                                 virtual_device.setupPacket, virtual_device.transferBuff, bufCount,
+                                 (usb_complete_t)blink_completion_handler, blinkURB_Control->context);
+            retVal = usb_submit_urb(blinkURB_Control, GFP_KERNEL);
+            log_return_value("blink_write - CONTROL URB", retVal);
 
             /* URB ATTEMPT #1 IS FAILING */
             // usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
@@ -191,8 +270,6 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, maxPacketSize, &bytesTransferred, MILLI_WAIT);
             // retVal = usb_interrupt_msg(blinkDevice, blinkPipe, virtual_device.transferBuff, MIN(bufCount, BUFF_SIZE), &bytesTransferred, MILLI_WAIT);
             // printk(KERN_INFO "%s: URB interrupt message transferred %d bytes.\n", DEVICE_NAME, bytesTransferred);
-
-
         }
     }
 
@@ -213,7 +290,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 
     return wrote_cnt;
     */
-
+    log_return_value("blink_write", retVal);
     return retVal;
 }
 
@@ -381,6 +458,7 @@ static int __init driver_entry(void)
 
     // 3. Allocate an URB to use
     blinkURB = usb_alloc_urb(0, 0);
+    blinkURB_Control = usb_alloc_urb(0, 0);
 
     // 4. Zeroize data
     // for (i = 0; i <= BUFF_SIZE; i++)
@@ -397,6 +475,8 @@ static void __exit driver_exit(void)
     // Deallocate the URB
     usb_free_urb(blinkURB);
     blinkURB = NULL;
+    usb_free_urb(blinkURB_Control);
+    blinkURB_Control = NULL;
     // Unregister the device driver
     usb_deregister(&blink_driver);
     // Log it

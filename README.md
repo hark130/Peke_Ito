@@ -69,3 +69,6 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)
 * [LKM Online Reading List](http://www.dit.upm.es//~jmseyas/linux/kernel/hackers-docs.html) - Referenced at the end of the [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)
 * [(nearly) Complete Linux Loadable Kernel Modules](https://dl.packetstormsecurity.net/docs/hack/LKM_HACKING.html)
+* [Interrupt vs Polling Chararacter Drivers](http://en.tldp.org/LDP/khg/HyperNews/get/devices/char.html)
+* [Common Device Driver Functionality](http://en.tldp.org/LDP/khg/HyperNews/get/devices/reference.html)
+* [Phrack](http://www.phrack.org/) - an ezine written by and for hackers 

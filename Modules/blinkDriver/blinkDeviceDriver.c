@@ -203,6 +203,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
             retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+            // retVal = usb_submit_urb(blinkURB, 0x204);
             log_return_value("blink_write - INT URB", retVal);
 
             /* ATTEMPT #4.1 */
@@ -227,24 +228,48 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             //     					  usb_complete_t complete_fn,
             //     					  void *context)
             // Create setupPacket
-            virtual_device.setupPacket[0] = SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC;  // bmRequestType
-            virtual_device.setupPacket[1] = SP_RQST_SET_CONFIG;  // bRequest
-            virtual_device.setupPacket[2] = 1; // wValue ReportID
-            virtual_device.setupPacket[3] = 3; // wValue ReportType
-            virtual_device.setupPacket[4] = 0; // wIndex
-            virtual_device.setupPacket[5] = 0; // wIndex
-            virtual_device.setupPacket[6] = 9; // wLength
-            virtual_device.setupPacket[7] = 0; // wLength
-            for (i = 0; i < 8; i++)
+            // virtual_device.setupPacket[0] = SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC;  // bmRequestType
+            // virtual_device.setupPacket[1] = SP_RQST_SET_CONFIG;  // bRequest
+            // virtual_device.setupPacket[2] = 1; // wValue ReportID
+            // virtual_device.setupPacket[3] = 3; // wValue ReportType
+            // virtual_device.setupPacket[4] = 0; // wIndex
+            // virtual_device.setupPacket[5] = 0; // wIndex
+            // virtual_device.setupPacket[6] = 9; // wLength
+            // virtual_device.setupPacket[7] = 0; // wLength
+            // for (i = 0; i < 8; i++)
+            // {
+            //     printk(KERN_INFO "%s: Setup Packet Buffer[%d] == %d (0x%X)\n", DEVICE_NAME, i, virtual_device.setupPacket[i], virtual_device.setupPacket[i]);
+            // }
+            // printk(KERN_INFO "%s: usb_fill_control_urb - Using pipe #%d.\n", DEVICE_NAME, blinkPipe_Control);
+            // usb_fill_control_urb(blinkURB_Control, blinkDevice, blinkPipe_Control,
+            //                      virtual_device.setupPacket, virtual_device.transferBuff, bufCount,
+            //                      (usb_complete_t)blink_completion_handler, blinkURB_Control->context);
+            // // retVal = usb_submit_urb(blinkURB_Control, 0x204);
+            // retVal = usb_submit_urb(blinkURB_Control, GFP_KERNEL);
+            // log_return_value("blink_write - usb_fill_control_urb", retVal);
+
+            /* ATTEMPT #4.3 */
+            // int usb_control_msg(struct usb_device *dev, unsigned int pipe,
+            //                     __u8 request, __u8 requesttype,
+            //                     __u16 value, __u16 index,
+            //                     void *data, __u16 size, int timeout);
+            // If successful, the number of bytes transferred. Otherwise, a negative error number.
+            retVal = usb_control_msg(blinkDevice, blinkPipe_Control,
+                                     SP_RQST_SET_CONFIG, SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC,
+                                     0x301, 0,
+                                     virtual_device.transferBuff, bufCount, MILLI_WAIT);
+
+            if (retVal == bufCount)
             {
-                printk(KERN_INFO "%s: Setup Packet Buffer[%d] == %d (0x%X)\n", DEVICE_NAME, i, virtual_device.setupPacket[i], virtual_device.setupPacket[i]);
+                printk(KERN_INFO "%s: usb_control_msg successfully transferred %d bytes.\n", DEVICE_NAME, retVal);
+                retVal = 0;  // Success
             }
-            printk(KERN_INFO "%s: usb_fill_control_urb - Using pipe #%d.\n", DEVICE_NAME, blinkPipe_Control);
-            usb_fill_control_urb(blinkURB_Control, blinkDevice, blinkPipe_Control,
-                                 virtual_device.setupPacket, virtual_device.transferBuff, bufCount,
-                                 (usb_complete_t)blink_completion_handler, blinkURB_Control->context);
-            retVal = usb_submit_urb(blinkURB_Control, GFP_KERNEL);
-            log_return_value("blink_write - CONTROL URB", retVal);
+            else if (retVal == 0)
+            {
+                retVal = -EINVAL;
+            }
+
+            log_return_value("blink_write - usb_control_msg", retVal);
 
             /* URB ATTEMPT #1 IS FAILING */
             // usb_fill_int_urb(blinkURB, blinkDevice, blinkPipe,
@@ -294,6 +319,15 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
     return wrote_cnt;
     */
     log_return_value("blink_write", retVal);
+
+    // Free kernel malloc'd memory
+    if(virtual_device.transferBuff)
+    {
+        printk(KERN_ERR "%s: Freeing transferBuff kernel memory.\n", DEVICE_NAME);
+        kfree(virtual_device.transferBuff);
+        virtual_device.transferBuff = NULL;
+    }
+
     return retVal;
 }
 
@@ -301,6 +335,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 static void blink_completion_handler(struct urb* urb)
 /* called when data arrives from device (usb-core)*/
 {
+    // Individual frame descriptor status fields may report more status codes.
     log_return_value("blink_completion_handler", urb->status);
 }
 
@@ -332,7 +367,8 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
     // unsigned int usb_rcvintpipe(struct usb_device *dev, unsigned int endpoint)
     blinkPipe = usb_rcvintpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
     // unsigned int usb_rcvctrlpipe(struct usb_device *dev, unsigned int endpoint)
-    blinkPipe_Control = usb_rcvctrlpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
+    blinkPipe_Control = usb_rcvctrlpipe(blinkDevice, 0);
+    // blinkPipe_Control = usb_rcvctrlpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
     blinkInterval = interface->cur_altsetting->endpoint[0].desc.bInterval;
     maxPacketSize = interface->cur_altsetting->endpoint[0].desc.wMaxPacketSize;
     retVal = 0;  // Done messing around with DEBUG statements

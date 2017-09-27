@@ -66,3 +66,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [Read and Write USB Device](https://sysplay.in/blog/tag/usb-data-transfer/)
 * [struct urb Man Page](https://www.systutorials.com/docs/linux/man/9-struct_urb/)
 * [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)
+* [LKM Online Reading List](http://www.dit.upm.es//~jmseyas/linux/kernel/hackers-docs.html) - Referenced at the end of the [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)

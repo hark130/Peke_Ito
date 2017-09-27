@@ -202,8 +202,15 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
                              blinkURB->context, blinkInterval);
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-            retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
             // retVal = usb_submit_urb(blinkURB, 0x204);
+            retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
+
+            /* ATTEMPT #4.4 */
+            // int usb_interrupt_msg(struct usb_device *usb_dev, unsigned int pipe,
+	        //                       void *data, int len, int *actual_length, int timeout);
+            // retVal = usb_interrupt_msg(blinkDevice, blinkPipe,
+            //                            NULL, 0, &bytesTransferred, MILLI_WAIT);
+
             log_return_value("blink_write - INT URB", retVal);
 
             /* ATTEMPT #4.1 */

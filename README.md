@@ -65,3 +65,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * Most drivers do not use 'usb_fill_control_urb', as it is much simpler to use the synchronous API calls as described in [Chapter 13 Section 5](http://www.makelinux.net/ldd3/chp-13-sect-5#chp-13-sect-5)
 * [Read and Write USB Device](https://sysplay.in/blog/tag/usb-data-transfer/)
 * [struct urb Man Page](https://www.systutorials.com/docs/linux/man/9-struct_urb/)
+* [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)

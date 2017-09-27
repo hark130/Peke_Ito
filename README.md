@@ -30,6 +30,7 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
         [ ] NOTE: Continue reading Ch 13 at "Writing a USB Driver"
         [ ] Dynamically read in the three strings (Make, Model, Serial #)
     [ ] "Unk" USB Device Driver (Nerf-style turret)
+    [ ] [LKM to Intercept Syscalls](https://dl.packetstormsecurity.net/docs/hack/LKM_HACKING.html#II.1.)
     [ ] Manage concurrent execution
         * include <linux/sched.h>
         * printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);

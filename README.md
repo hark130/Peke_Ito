@@ -63,3 +63,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [Reverse Engineering SET_REPORT Packets](https://hackaday.io/project/5301/logs)
 * [Universal Serial Bus Specification v2.0](sdphca.ucsd.edu/lab_equip_manuals/usb_20.pdf)
 * Most drivers do not use 'usb_fill_control_urb', as it is much simpler to use the synchronous API calls as described in [Chapter 13 Section 5](http://www.makelinux.net/ldd3/chp-13-sect-5#chp-13-sect-5)
+* [Read and Write USB Device](https://sysplay.in/blog/tag/usb-data-transfer/)

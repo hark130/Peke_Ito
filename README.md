@@ -67,3 +67,4 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [struct urb Man Page](https://www.systutorials.com/docs/linux/man/9-struct_urb/)
 * [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)
 * [LKM Online Reading List](http://www.dit.upm.es//~jmseyas/linux/kernel/hackers-docs.html) - Referenced at the end of the [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)
+* [(nearly) Complete Linux Loadable Kernel Modules](https://dl.packetstormsecurity.net/docs/hack/LKM_HACKING.html)

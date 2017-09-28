@@ -30,6 +30,7 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
         [ ] NOTE: Continue reading Ch 13 at "Writing a USB Driver"
         [ ] Dynamically read in the three strings (Make, Model, Serial #)
     [ ] "Unk" USB Device Driver (Nerf-style turret)
+    [ ] [LKM to Intercept Syscalls](https://dl.packetstormsecurity.net/docs/hack/LKM_HACKING.html#II.1.)
     [ ] Manage concurrent execution
         * include <linux/sched.h>
         * printk(KERN_INFO "The process is \"%s\" (pid %i)\n", current->comm, current->pid);
@@ -63,3 +64,11 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [Reverse Engineering SET_REPORT Packets](https://hackaday.io/project/5301/logs)
 * [Universal Serial Bus Specification v2.0](sdphca.ucsd.edu/lab_equip_manuals/usb_20.pdf)
 * Most drivers do not use 'usb_fill_control_urb', as it is much simpler to use the synchronous API calls as described in [Chapter 13 Section 5](http://www.makelinux.net/ldd3/chp-13-sect-5#chp-13-sect-5)
+* [Read and Write USB Device](https://sysplay.in/blog/tag/usb-data-transfer/)
+* [struct urb Man Page](https://www.systutorials.com/docs/linux/man/9-struct_urb/)
+* [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)
+* [LKM Online Reading List](http://www.dit.upm.es//~jmseyas/linux/kernel/hackers-docs.html) - Referenced at the end of the [The Linux Kernel Module Programming Guide](http://www.tldp.org/LDP/lkmpg/2.6/html/lkmpg.html)
+* [(nearly) Complete Linux Loadable Kernel Modules](https://dl.packetstormsecurity.net/docs/hack/LKM_HACKING.html)
+* [Interrupt vs Polling Chararacter Drivers](http://en.tldp.org/LDP/khg/HyperNews/get/devices/char.html)
+* [Common Device Driver Functionality](http://en.tldp.org/LDP/khg/HyperNews/get/devices/reference.html)
+* [Phrack](http://www.phrack.org/) - an ezine written by and for hackers 

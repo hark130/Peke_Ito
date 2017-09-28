@@ -46,7 +46,10 @@
 
 int blink_open(struct inode *inode, struct file *filp);
 int blink_close(struct inode *inode, struct file *filp);
+// ssize_t (*write) (struct file *, const char *, size_t, loff_t *);
 ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset);
+// ssize_t (*read) (struct file *, char *, size_t, loff_t *);
+ssize_t blink_read(struct file* filp, char* bufSourceData, size_t bufCount, loff_t* curOffset);
 static void blink_completion_handler(struct urb* urb);
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);
@@ -91,11 +94,11 @@ struct urb* blinkURB_Control = NULL;
 // This tells the kernel which functions to call when a user operates on our device file_operations
 struct file_operations blinkOps =
 {
-    .owner = THIS_MODULE,       // Prevent unloading of this module when operations are in use
+    .owner = THIS_MODULE,      // Prevent unloading of this module when operations are in use
     .open = blink_open,        // Points to the method to call when opening the device
     .release = blink_close,    // Points to the method to call when closing the device
     .write = blink_write,      // Points to the method to call when writing to the device
-    .read = blink_read         // Points to the method to call when reading from the device
+    .read = blink_read,        // Points to the method to call when reading from the device
 };
 
 // 6. Other
@@ -197,13 +200,13 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
             // 				      usb_complete_t complete_fn,
             // 				      void *context,
             // 				      int interval)
-            printk(KERN_INFO "%s: usb_fill_int_urb - Using pipe #%d.\n", DEVICE_NAME, blinkPipe);
+            printk(KERN_INFO "%s: usb_fill_int_urb - Using pipe #%d.\n", DEVICE_NAME, blinkPipeIntRecv);
             usb_fill_int_urb(blinkURB, blinkDevice, blinkPipeIntRecv,
                              NULL, 0, (usb_complete_t)blink_completion_handler,
                              blinkURB->context, blinkInterval);
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-            // retVal = usb_submit_urb(blinkURB, 0x204);
+            blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags 
             retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
 
             /* ATTEMPT #4.4 */
@@ -324,12 +327,12 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
 
 
 // Called when user wants to read information from the device
-ssize_t blink_read(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset)
+ssize_t blink_read(struct file* filp, char* bufSourceData, size_t bufCount, loff_t* curOffset)
 {
 	retVal = 0;
 	printk(KERN_ERR "%s: Entering blink_read().\n", DEVICE_NAME);
 	bytesTransferred = 0;  // Zeroize temp variable
-	
+
     // Allocate a transfer buffer
     virtual_device.transferBuff = (char*)kmalloc(bufCount + 1, GFP_KERNEL);
     if(virtual_device.transferBuff == NULL)
@@ -342,12 +345,12 @@ ssize_t blink_read(struct file* filp, const char* bufSourceData, size_t bufCount
 		/* Read the data from the interrupt endpoint */
 		// int usb_interrupt_msg(struct usb_device *usb_dev, unsigned int pipe,
 		//                       void *data, int len, int *actual_length, int timeout);
-		retval = usb_interrupt_msg(device, blinkPipeIntSend,
+		retVal = usb_interrupt_msg(blinkDevice, blinkPipeIntSend,
 								   virtual_device.transferBuff, maxPacketSize, &bytesTransferred, MILLI_WAIT);
-		printk(KERN_INFO "%s: URB interrupt message says incoming bufCount %d bytes.\n", DEVICE_NAME, bufCount);
+		printk(KERN_INFO "%s: URB interrupt message says incoming bufCount %lu bytes.\n", DEVICE_NAME, bufCount);
 		printk(KERN_INFO "%s: URB interrupt message read %d bytes.\n", DEVICE_NAME, bytesTransferred);
 		log_return_value("blink_read - INT URB", retVal);
-		
+
 		if (virtual_device.transferBuff)
 		{
             for (i = 0; i < bufCount; i++)
@@ -359,7 +362,7 @@ ssize_t blink_read(struct file* filp, const char* bufSourceData, size_t bufCount
             }
 		}
 	}
-	
+
     // Free kernel malloc'd memory
     if(virtual_device.transferBuff)
     {
@@ -367,7 +370,7 @@ ssize_t blink_read(struct file* filp, const char* bufSourceData, size_t bufCount
         kfree(virtual_device.transferBuff);
         virtual_device.transferBuff = NULL;
     }
-	
+
 	return retVal;
 }
 
@@ -409,7 +412,7 @@ static int blink_probe(struct usb_interface* interface, const struct usb_device_
     // unsigned int usb_rcvctrlpipe(struct usb_device *dev, unsigned int endpoint)
     blinkPipe_Control = usb_rcvctrlpipe(blinkDevice, 0);
     // blinkPipe_Control = usb_rcvctrlpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
-	// unsigned int usb_sndintpipe(struct usb_device *dev, unsigned int endpoint) 
+	// unsigned int usb_sndintpipe(struct usb_device *dev, unsigned int endpoint)
 	blinkPipeIntSend = usb_sndintpipe(blinkDevice, interface->cur_altsetting->endpoint[0].desc.bEndpointAddress);
     blinkInterval = interface->cur_altsetting->endpoint[0].desc.bInterval;
     maxPacketSize = interface->cur_altsetting->endpoint[0].desc.wMaxPacketSize;

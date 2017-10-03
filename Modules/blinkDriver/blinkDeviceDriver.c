@@ -153,7 +153,7 @@ int blink_open(struct inode *inode, struct file *filp)
     //     printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
     // }
     printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
-    
+
     // Request an interrupt line
     printk(KERN_INFO "%s: starting interrupt process\n", DEVICE_NAME);
     
@@ -273,7 +273,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
                              blinkURB->context, blinkInterval);
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-            blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags 
+            blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags
             retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
 
             /* ATTEMPT #4.4 */

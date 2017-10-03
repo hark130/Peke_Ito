@@ -116,7 +116,7 @@ unsigned int blinkPipe_Control;             // The specific endpoint of the USB 
 unsigned int blinkInterval;                 // Interval for polling endpoint for data transfers
 int bytesTransferred;                       // usb_interrupt_msg() wants a place to store the actual bytes transferred
 __le16 maxPacketSize;                       // wMaxPacketSize of the endpoint
-unsigned int blinkIRQ;                      // blink device IRQ number
+unsigned int blinkIRQ = 7;                  // blink device IRQ number
 
 
 /////////////////////////////////////
@@ -152,15 +152,15 @@ int blink_open(struct inode *inode, struct file *filp)
     //     printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
     // }
     printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
-    
+
     // Request an interrupt line
     printk(KERN_INFO "%s: requesting interrupt\n", DEVICE_NAME);
-    
-    // int request_irq (unsigned int irq,       // Interrupt line to allocate 
-    //                  irq_handler_t handler,  // Function to be called when the IRQ occurs 
-    //                  unsigned long irqflags, // Interrupt type flags 
-    //                  const char* devname,    // An ascii name for the claiming device 
-    //                  void* dev_id);          // A cookie passed back to the handler function 
+
+    // int request_irq (unsigned int irq,       // Interrupt line to allocate
+    //                  irq_handler_t handler,  // Function to be called when the IRQ occurs
+    //                  unsigned long irqflags, // Interrupt type flags
+    //                  const char* devname,    // An ascii name for the claiming device
+    //                  void* dev_id);          // A cookie passed back to the handler function
     // Returns 0 on success, negative code on error (especially -EBUSY)
     retVal = request_irq(blinkIRQ, \
                          (irq_handler_t)blink_interrupt_handler, \
@@ -248,7 +248,7 @@ ssize_t blink_write(struct file* filp, const char* bufSourceData, size_t bufCoun
                              blinkURB->context, blinkInterval);
             // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
             printk(KERN_INFO "%s: Submitting the URB\n", DEVICE_NAME);
-            blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags 
+            blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags
             retVal = usb_submit_urb(blinkURB, GFP_KERNEL);
 
             /* ATTEMPT #4.4 */

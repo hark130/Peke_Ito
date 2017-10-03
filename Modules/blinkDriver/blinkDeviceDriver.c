@@ -55,7 +55,7 @@ static void blink_completion_handler(struct urb* urb);
 static int blink_probe(struct usb_interface* interface, const struct usb_device_id* id);
 static void blink_disconnect(struct usb_interface* interface);
 void log_return_value(char* functionName, int retVal);
-irqreturn_t blink_interrupt_handler(int irq, void* dev_id, struct pt_regs* regs);
+static irqreturn_t blink_interrupt_handler(int irq, void* dev_id, struct pt_regs* regs);
 
 ////////////////////////////////
 /* DEFINE NECESSARY VARIABLES */
@@ -116,6 +116,7 @@ unsigned int blinkPipe_Control;             // The specific endpoint of the USB 
 unsigned int blinkInterval;                 // Interval for polling endpoint for data transfers
 int bytesTransferred;                       // usb_interrupt_msg() wants a place to store the actual bytes transferred
 __le16 maxPacketSize;                       // wMaxPacketSize of the endpoint
+unsigned long irqBitmask;                   // Bitmask of unassigned interrupts from probe_irq_on()
 unsigned int blinkIRQ;                      // blink device IRQ number
 
 
@@ -124,7 +125,7 @@ unsigned int blinkIRQ;                      // blink device IRQ number
 /////////////////////////////////////
 
 /* INTERRUPT HANDLING */
-irqreturn_t blink_interrupt_handler(int irq, void* dev_id, struct pt_regs* regs)
+static irqreturn_t blink_interrupt_handler(int irq, void* dev_id, struct pt_regs* regs)
 {
     printk(KERN_INFO "%s: entered interrupt handler\n", DEVICE_NAME);
 
@@ -154,26 +155,50 @@ int blink_open(struct inode *inode, struct file *filp)
     printk(KERN_INFO "%s: opened device\n", DEVICE_NAME);
     
     // Request an interrupt line
-    printk(KERN_INFO "%s: requesting interrupt\n", DEVICE_NAME);
+    printk(KERN_INFO "%s: starting interrupt process\n", DEVICE_NAME);
     
-    // int request_irq (unsigned int irq,       // Interrupt line to allocate 
-    //                  irq_handler_t handler,  // Function to be called when the IRQ occurs 
-    //                  unsigned long irqflags, // Interrupt type flags 
-    //                  const char* devname,    // An ascii name for the claiming device 
-    //                  void* dev_id);          // A cookie passed back to the handler function 
-    // Returns 0 on success, negative code on error (especially -EBUSY)
-    retVal = request_irq(blinkIRQ, \
-                         (irq_handler_t)blink_interrupt_handler, \
-                         0, \
-                         DEVICE_NAME, \
-                         &virtual_device);
-    if (!retVal)
+    // Kernel-assisted probing
+    printk(KERN_INFO "%s: probing interrupts\n", DEVICE_NAME);
+    // 1. Get bitmask of unassigned interrupts
+    irqBitmask = probe_irq_on();
+    // 2. Force device to generate at least one interrupt
+    // BUT HOW?!
+    usb_control_msg(blinkDevice, blinkPipe_Control,
+                    SP_RQST_SET_CONFIG, SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC,
+                    0x301, 0,
+                    virtual_device.transferBuff, BUFF_SIZE, MILLI_WAIT);
+    // 3. Any interrupts occurred?
+    blinkIRQ = probe_irq_off(irqBitmask);
+
+    if (0 == blinkIRQ)
     {
-        printk(KERN_INFO "%s: interrupt request successfull!\n", DEVICE_NAME);
+        printk(KERN_ALERT "%s: no interrupts occurred\n", DEVICE_NAME);
+    }
+    else if (blinkIRQ < 0)
+    {
+        log_return_value("kernel-assisted probe", blinkIRQ);
     }
     else
     {
-        log_return_value("blink request_irq", retVal);
+        // int request_irq (unsigned int irq,       // Interrupt line to allocate 
+        //                  irq_handler_t handler,  // Function to be called when the IRQ occurs 
+        //                  unsigned long irqflags, // Interrupt type flags 
+        //                  const char* devname,    // An ascii name for the claiming device 
+        //                  void* dev_id);          // A cookie passed back to the handler function 
+        // Returns 0 on success, negative code on error (especially -EBUSY)
+        retVal = request_irq(blinkIRQ, \
+                             (irq_handler_t)blink_interrupt_handler, \
+                             0, \
+                             DEVICE_NAME, \
+                             &virtual_device);
+        if (!retVal)
+        {
+            printk(KERN_INFO "%s: interrupt request successfull!\n", DEVICE_NAME);
+        }
+        else
+        {
+            log_return_value("request_irq", retVal);
+        }
     }
 
     return 0;
@@ -190,7 +215,7 @@ int blink_close(struct inode *inode, struct file *filp)
     printk(KERN_INFO "%s: closed device\n", DEVICE_NAME);
 
     // Free an interrupt line
-    printk(KERN_INFO "%s: freeing interrupt #%u\n", DEVICE_NAME, 0);
+    printk(KERN_INFO "%s: freeing interrupt #%u\n", DEVICE_NAME, blinkIRQ);
     // void free_irq(unsigned int irq, void *dev_id);
     free_irq(blinkIRQ, &virtual_device);
 

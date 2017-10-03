@@ -166,19 +166,30 @@ int blink_open(struct inode *inode, struct file *filp)
     // Enable interrupts
     // void local_irq_enable(void);
     local_irq_enable();
-    // Create setupPacket
-    virtual_device.setupPacket[0] = SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC;  // bmRequestType
-    virtual_device.setupPacket[1] = SP_RQST_SET_CONFIG;  // bRequest
-    virtual_device.setupPacket[2] = 1; // wValue ReportID
-    virtual_device.setupPacket[3] = 3; // wValue ReportType
-    virtual_device.setupPacket[4] = 0; // wIndex
-    virtual_device.setupPacket[5] = 0; // wIndex
-    virtual_device.setupPacket[6] = 9; // wLength
-    virtual_device.setupPacket[7] = 0; // wLength
-    usb_control_msg(blinkDevice, blinkPipe_Control,
-                    SP_RQST_SET_CONFIG, SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC,
-                    0x301, 0,
-                    virtual_device.setupPacket, 8, MILLI_WAIT);
+
+    // Attempt #1 to generate at least one interrupt
+    // // Create setupPacket
+    // virtual_device.setupPacket[0] = SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC;  // bmRequestType
+    // virtual_device.setupPacket[1] = SP_RQST_SET_CONFIG;  // bRequest
+    // virtual_device.setupPacket[2] = 1; // wValue ReportID
+    // virtual_device.setupPacket[3] = 3; // wValue ReportType
+    // virtual_device.setupPacket[4] = 0; // wIndex
+    // virtual_device.setupPacket[5] = 0; // wIndex
+    // virtual_device.setupPacket[6] = 9; // wLength
+    // virtual_device.setupPacket[7] = 0; // wLength
+    // usb_control_msg(blinkDevice, blinkPipe_Control,
+    //                 SP_RQST_SET_CONFIG, SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC,
+    //                 0x301, 0,
+    //                 virtual_device.setupPacket, 8, MILLI_WAIT);
+
+    // Attempt #2 to generate at least one interrupt
+    usb_fill_int_urb(blinkURB, blinkDevice, blinkPipeIntRecv,
+                     NULL, 0, (usb_complete_t)blink_completion_handler,
+                     blinkURB->context, blinkInterval);
+    // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
+    blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags
+    usb_submit_urb(blinkURB, GFP_KERNEL);
+
     // 3. Any interrupts occurred?
     // Disable interrupts
     // void local_irq_disable(void);
@@ -232,7 +243,10 @@ int blink_close(struct inode *inode, struct file *filp)
     // Free an interrupt line
     printk(KERN_INFO "%s: freeing interrupt #%u\n", DEVICE_NAME, blinkIRQ);
     // void free_irq(unsigned int irq, void *dev_id);
-    free_irq(blinkIRQ, &virtual_device);
+    if (blinkIRQ > 0)
+    {
+        free_irq(blinkIRQ, &virtual_device);
+    }
 
     return 0;
 }

@@ -158,14 +158,14 @@ int blink_open(struct inode *inode, struct file *filp)
     printk(KERN_INFO "%s: starting interrupt process\n", DEVICE_NAME);
     
     // Kernel-assisted probing
-    printk(KERN_INFO "%s: probing interrupts\n", DEVICE_NAME);
+    // printk(KERN_INFO "%s: probing interrupts\n", DEVICE_NAME);
     // 1. Get bitmask of unassigned interrupts
-    irqBitmask = probe_irq_on();
+    // irqBitmask = probe_irq_on();
     // 2. Force device to generate at least one interrupt
     // BUT HOW?!
     // Enable interrupts
     // void local_irq_enable(void);
-    local_irq_enable();
+    // local_irq_enable();
 
     // Attempt #1 to generate at least one interrupt
     // // Create setupPacket
@@ -183,18 +183,20 @@ int blink_open(struct inode *inode, struct file *filp)
     //                 virtual_device.setupPacket, 8, MILLI_WAIT);
 
     // Attempt #2 to generate at least one interrupt
-    usb_fill_int_urb(blinkURB, blinkDevice, blinkPipeIntRecv,
-                     NULL, 0, (usb_complete_t)blink_completion_handler,
-                     blinkURB->context, blinkInterval);
-    // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
-    blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags
-    usb_submit_urb(blinkURB, GFP_KERNEL);
+    // usb_fill_int_urb(blinkURB, blinkDevice, blinkPipeIntRecv,
+    //                  NULL, 0, (usb_complete_t)blink_completion_handler,
+    //                  blinkURB->context, blinkInterval);
+    // // Submit URB w/ int usb_submit_urb(struct urb *urb, int mem_flags);
+    // blinkURB->transfer_flags |= 0x204;  // Attempting to replicate the exact transfer_flags
+    // usb_submit_urb(blinkURB, GFP_KERNEL);
 
     // 3. Any interrupts occurred?
     // Disable interrupts
     // void local_irq_disable(void);
-    local_irq_disable();
-    blinkIRQ = probe_irq_off(irqBitmask);
+    // local_irq_disable();
+    // blinkIRQ = probe_irq_off(irqBitmask);
+
+    blinkIRQ = 7;
 
     if (0 == blinkIRQ)
     {

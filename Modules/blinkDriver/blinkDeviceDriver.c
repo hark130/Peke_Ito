@@ -163,10 +163,19 @@ int blink_open(struct inode *inode, struct file *filp)
     irqBitmask = probe_irq_on();
     // 2. Force device to generate at least one interrupt
     // BUT HOW?!
+    // Create setupPacket
+    virtual_device.setupPacket[0] = SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC;  // bmRequestType
+    virtual_device.setupPacket[1] = SP_RQST_SET_CONFIG;  // bRequest
+    virtual_device.setupPacket[2] = 1; // wValue ReportID
+    virtual_device.setupPacket[3] = 3; // wValue ReportType
+    virtual_device.setupPacket[4] = 0; // wIndex
+    virtual_device.setupPacket[5] = 0; // wIndex
+    virtual_device.setupPacket[6] = 9; // wLength
+    virtual_device.setupPacket[7] = 0; // wLength
     usb_control_msg(blinkDevice, blinkPipe_Control,
                     SP_RQST_SET_CONFIG, SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC,
                     0x301, 0,
-                    virtual_device.transferBuff, BUFF_SIZE, MILLI_WAIT);
+                    virtual_device.setupPacket, 8, MILLI_WAIT);
     // 3. Any interrupts occurred?
     blinkIRQ = probe_irq_off(irqBitmask);
 

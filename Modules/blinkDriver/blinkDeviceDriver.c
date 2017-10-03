@@ -163,6 +163,9 @@ int blink_open(struct inode *inode, struct file *filp)
     irqBitmask = probe_irq_on();
     // 2. Force device to generate at least one interrupt
     // BUT HOW?!
+    // Enable interrupts
+    // void local_irq_enable(void);
+    local_irq_enable();
     // Create setupPacket
     virtual_device.setupPacket[0] = SP_RT_DPTD_H2D | SP_RT_TYPE_CLASS | SP_RT_RCPT_INTRFC;  // bmRequestType
     virtual_device.setupPacket[1] = SP_RQST_SET_CONFIG;  // bRequest
@@ -177,6 +180,9 @@ int blink_open(struct inode *inode, struct file *filp)
                     0x301, 0,
                     virtual_device.setupPacket, 8, MILLI_WAIT);
     // 3. Any interrupts occurred?
+    // Disable interrupts
+    // void local_irq_disable(void);
+    local_irq_disable();
     blinkIRQ = probe_irq_off(irqBitmask);
 
     if (0 == blinkIRQ)

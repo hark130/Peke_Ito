@@ -42,3 +42,11 @@
 * [Installing an Interrupt Handler](http://www.makelinux.net/ldd3/chp-10-sect-2)
 * [Writing a Linux Kernel Module — Part 3: Buttons and LEDs](http://derekmolloy.ie/kernel-gpio-programming-buttons-and-leds/)
 * [blink1 hid.c](https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/commandline/hidapi/linux/hid.c)
+
+## Investigation
+* https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/hardware/firmware/usbdrv/usbdrv.h
+* https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/commandline/hidapi/linux/README.txt
+* https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/hardware/firmware/usbconfig.h
+* https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/hardware/firmware_mk2/main.c
+* https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/hardware/firmware/usbdrv/usbportability.h
+* https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/commandline/hidapi/libusb/hid.c

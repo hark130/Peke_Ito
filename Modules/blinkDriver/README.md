@@ -1,4 +1,5 @@
 ## General Resources
+* [blink firmware](https://github.com/todbot/blink1/blob/master/hardware/firmware/blink1.c)
 * http://opensourceforu.com/2011/10/usb-drivers-in-linux-1/
 * http://matthias.vallentin.net/blog/2007/04/writing-a-linux-kernel-driver-for-an-unknown-usb-device/
 * https://kernel.readthedocs.io/en/sphinx-samples/writing_usb_driver.html
@@ -33,7 +34,11 @@
 * [Interrupt vs Polling Chararacter Drivers](http://en.tldp.org/LDP/khg/HyperNews/get/devices/char.html)
 * [Common Device Driver Functionality](http://en.tldp.org/LDP/khg/HyperNews/get/devices/reference.html)
 * [Phrack](http://www.phrack.org/) - an ezine written by and for hackers 
+* [Exploitation Report](http://kghosh.yoll.net/)
 
 ## Interrupt Handling
 * [Chapter 7. Interrupts and Interrupt Handlers](https://notes.shichao.io/lkd/ch7/)
 * [Linux Kernel Module Programming Guide 12.1. Interrupt Handlers](http://www.tldp.org/LDP/lkmpg/2.6/html/x1256.html)
+* [Installing an Interrupt Handler](http://www.makelinux.net/ldd3/chp-10-sect-2)
+* [Writing a Linux Kernel Module — Part 3: Buttons and LEDs](http://derekmolloy.ie/kernel-gpio-programming-buttons-and-leds/)
+* [blink1 hid.c](https://github.com/todbot/blink1/blob/aedb03fcfb68461c570e4a76dc3b5d6a1d3a5e82/commandline/hidapi/linux/hid.c)

@@ -156,7 +156,7 @@ int blink_open(struct inode *inode, struct file *filp)
 
     // Request an interrupt line
     printk(KERN_INFO "%s: starting interrupt process\n", DEVICE_NAME);
-    
+
     // Kernel-assisted probing
     // printk(KERN_INFO "%s: probing interrupts\n", DEVICE_NAME);
     // 1. Get bitmask of unassigned interrupts
@@ -208,11 +208,11 @@ int blink_open(struct inode *inode, struct file *filp)
     }
     else
     {
-        // int request_irq (unsigned int irq,       // Interrupt line to allocate 
-        //                  irq_handler_t handler,  // Function to be called when the IRQ occurs 
-        //                  unsigned long irqflags, // Interrupt type flags 
-        //                  const char* devname,    // An ascii name for the claiming device 
-        //                  void* dev_id);          // A cookie passed back to the handler function 
+        // int request_irq (unsigned int irq,       // Interrupt line to allocate
+        //                  irq_handler_t handler,  // Function to be called when the IRQ occurs
+        //                  unsigned long irqflags, // Interrupt type flags
+        //                  const char* devname,    // An ascii name for the claiming device
+        //                  void* dev_id);          // A cookie passed back to the handler function
         // Returns 0 on success, negative code on error (especially -EBUSY)
         retVal = request_irq(blinkIRQ, \
                              (irq_handler_t)blink_interrupt_handler, \
@@ -477,7 +477,11 @@ static void blink_completion_handler(struct urb* urb)
 /* called when data arrives from device (usb-core)*/
 {
     // Individual frame descriptor status fields may report more status codes.
-    log_return_value("blink_completion_handler", urb->status);
+    log_return_value("blink_completion_handler URB status", urb->status);
+
+    printk(KERN_INFO "%s: blink completion handler is resubmitting the URB?", DEVICE_NAME);
+    retVal = usb_submit_urb(urb, GFP_KERNEL);
+    log_return_value("blink_completion_handler 2nd URB status", retVal);
 }
 
 

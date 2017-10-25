@@ -43,7 +43,7 @@ static struct usb_device_id turret_table[] =
 MODULE_DEVICE_TABLE(usb, turret_table);
 
 // USB Driver struct
-static struct usb_driver turret_driver =
+static struct usb_driver turretDriver =
 {
     .name = DEVICE_NAME,
     .id_table = turret_table,
@@ -65,9 +65,9 @@ struct file_operations turretOps =
 // USB Device struct
 static struct usb_device* turretDevice;  // Initialized by interface_to_usbdev(interface) in turret_probe()
 
-struct usb_host_interface *iface_desc;
+struct usb_host_interface* interfaceDesc;
 
-struct usb_endpoint_descriptor *endpoint;
+struct usb_endpoint_descriptor* endpoint;
 
 //////////////////////////////////////////////////////////////////////
 ////////////////////////// GLOBAL VARIABLES //////////////////////////
@@ -75,6 +75,10 @@ struct usb_endpoint_descriptor *endpoint;
 int major_number;               // Will store our major number - extracted from dev_t using macro - mknod /director/file c major minor
 int retVal;                     // Will be used to hold return values of functions
 int i;                          // Iterating variable
+/********************************************************************/
+/* CONSIDER WRITING A CUSTOM STRUCT TO STORE IMPORTANT INFORMATION  */
+/********************************************************************/
+unsigned int endpointIN = 0;    // IN endpoint
 
 
 //////////////////////////////////////////////////////////////////////
@@ -87,7 +91,7 @@ static int turret_probe(struct usb_interface* interface, const struct usb_device
 {
     retVal = 0;
 
-    blinkDevice = interface_to_usbdev(interface);
+    turretDevice = interface_to_usbdev(interface);
     
     /* FIND AN ENDPOINT */
     printk(KERN_INFO "%s: This interface has %u different settings.\n", DEVICE_NAME, interface->num_altsetting);
@@ -95,6 +99,7 @@ static int turret_probe(struct usb_interface* interface, const struct usb_device
     printk(KERN_INFO "%s: This interface has %d endpoints.\n", DEVICE_NAME, retVal);
     for (i = 0; i < interface->cur_altsetting->desc.bNumEndpoints; i++)
     {
+        // Report 
         retVal = 0;
         retVal |= interface->cur_altsetting->endpoint[i].desc.bDescriptorType;
         printk(KERN_INFO "%s: Endpoint #%d has bDescriptorType: %d.\n", DEVICE_NAME, i, retVal);
@@ -105,14 +110,18 @@ static int turret_probe(struct usb_interface* interface, const struct usb_device
         retVal |= interface->cur_altsetting->endpoint[i].desc.bmAttributes;
         printk(KERN_INFO "%s: Endpoint #%d has bmAttributes: %d.\n", DEVICE_NAME, i, retVal);
         
-/*
-        endpoint = &iface_desc->endpoint[i].desc;
+        // Find IN endpoint
+        endpoint = &interfaceDesc->endpoint[i].desc;
 
         if (((endpoint->bEndpointAddress & USB_ENDPOINT_DIR_MASK) == USB_DIR_IN)
-                && ((endpoint->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) ==
-                    USB_ENDPOINT_XFER_INT))
-            dev->int_in_endpoint = endpoint;
-*/
+            && ((endpoint->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) == USB_ENDPOINT_XFER_INT))
+        {
+            endpointIN = endpoint;
+        }
+        
+        // Verify endPointIN got an endpoint
+        // Register the USB device (see below)
+        // retval = usb_register_dev(interface, &ml_class);
     }
 }
 //////////// USB DRIVER: IMPLEMENT TURRET_DISCONNECT ////////////

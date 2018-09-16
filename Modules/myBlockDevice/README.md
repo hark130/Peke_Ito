@@ -24,3 +24,4 @@
 	- [Virtual Linux block device driver for simulating and performing I/O](https://github.com/rgolubtsov/virtblkiosim)
 	- [The Linux Kernel - Block Device Drivers](https://linux-kernel-labs.github.io/master/labs/block_device_drivers.html)
 	- [Linux Journal - An introduction to block device drivers](https://www.linuxjournal.com/article/2890)
+	- [Block Drivers](https://bootlin.com/doc/legacy/block-drivers/block_drivers.pdf)

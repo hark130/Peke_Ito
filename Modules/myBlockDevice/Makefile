@@ -4,9 +4,9 @@ BLOCK_FILE = virtBlockFile0
 BLOCK_FILENAME = $(BLOCK_FILE).img
 BLOCK_SIZE = 10M
 BLOCK_COUNT = 10
-BLOCK_DEV = virtBlockDev0
+BLOCK_DEV = loop0
 DEV_MAJ_NUM = 7
-DEV_MIN_NUM = 1337
+DEV_MIN_NUM = 0
 
 # Ubuntu
 # KERNEL_DIR = /usr/src/linux-headers-$(shell uname -r)

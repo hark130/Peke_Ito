@@ -13,15 +13,13 @@
 /* MACROS */
 ////////////
 #define DEVICE_NAME "Virtual Block Device 0"    // virtBlockDev0
-#define DEV_MAJOR_NUM 1337                      // Major number
-#define DEV_MINOR_NUM 31337                     // Minor number
-#define HARKLE_KERROR(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERROR>>> %s() returned %d!\n", #module, #funcName, errNum); } while (0);
+#define HARKLE_KERROR(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERROR>>> %s() returned %d!\n", module, #funcName, errNum); } while (0);
 
 /////////////
 /* GLOBALS */
 /////////////
 int retVal;                                     // Will be used to hold return values of functions
-int major_number;                               // Will store our major number - returned by register_blkdev()
+int major_number = 0;                           // Will store our major number - returned by register_blkdev()
 
 /////////////////////////
 /* FUNCTION PROTOTYPES */
@@ -35,8 +33,7 @@ static void __exit block_driver_exit(void);
 static int __init block_driver_entry(void)
 {
     // Register a new block device
-    // retVal = register_blkdev(0, DEVICE_NAME);
-    retVal = register_blkdev(DEV_MAJOR_NUM, DEVICE_NAME);
+    retVal = register_blkdev(major_number, DEVICE_NAME);
 
     if (retVal < 0)
     {
@@ -47,7 +44,11 @@ static int __init block_driver_entry(void)
         printk(KERN_INFO "%s: loaded module with major number %d\n", DEVICE_NAME, retVal);
     }    
 
-    major_number = retVal;
+    if (retVal > 0)
+    {
+        major_number = retVal;
+        retVal = 0;
+    }
 
     return retVal;
 }
@@ -55,7 +56,7 @@ static int __init block_driver_entry(void)
 
 static void __exit block_driver_exit(void)
 {
-    unregister_blkdev(DEV_MAJOR_NUM, DEVICE_NAME);
+    unregister_blkdev(major_number, DEVICE_NAME);
     printk(KERN_INFO "%s: unloaded module\n", DEVICE_NAME);
 
     return;

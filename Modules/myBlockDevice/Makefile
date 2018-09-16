@@ -13,12 +13,18 @@ clean:
 	rm -rf *.o *.ko *.mod.* *.symvers *.order *-
 
 test:
+	# lsmod to grep the loaded kernel modules for our LKM
+	# lsmod | grep myBlockDeviceDriver
+
+	# We put a — in front of the rmmod command to tell make to ignore
 	# an error in case the module isn’t loaded.
-	-sudo rmmod $(MY_MOD)
+	-sudo rmmod $(MY_LKM)
+
 	# Clear the kernel log without echo
 	sudo dmesg -C
+
 	# Insert the module
-	sudo insmod $(MY_MOD).ko
+	sudo insmod $(MY_LKM).ko
+	
 	# Display the kernel log
 	dmesg
-	# We put a — in front of the rmmod command to tell make to ignore

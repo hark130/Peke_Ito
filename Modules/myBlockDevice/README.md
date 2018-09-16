@@ -47,7 +47,7 @@
 		- f – find the first unused loop device. If a file argument is present, use this device. Otherwise, print its name.
 		- P – force kernel to scan partition table on newly created loop device.
 		- ```losetup -fP virtBlockFile0.img``` grabs the first available loop device name
-		- ```mknod mknod /dev/virtBlockDev0 b 7 1337``` manually creates a device file so you can...
+		- ```mknod /dev/virtBlockDev0 b 7 1337``` manually creates a device file so you can...
 		- ```losetup -P /dev/virtBlockDev0 virtBlockFile0.img``` to use your manually created device file instead of /dev/loop?
 	2. Print the loop device generated using the above command use “losetup -a”
 		- ```losetup -a```

@@ -17,6 +17,9 @@
 #define DEV_MAJOR_NUM 0                         // Major number
 #define DEV_MAX_MINORS 1                        // The maximum number of minor numbers that this disk can have
 #define HARKLE_KERROR(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERROR>>> %s() returned %d!\n", module, #funcName, errNum); } while (0);
+#ifndef DEV_TOTAL_SIZE
+#define DEV_TOTAL_SIZE 100                      // 10M * 10
+#endif  // DEV_TOTAL_SIZE
 
 //////////////
 /* TYPEDEFS */
@@ -24,6 +27,7 @@
 typedef struct _block_dev
 {
     struct gendisk *gd_ptr;                     // Kernel’s representation of an individual disk device
+    int totalSize;                              // Total size
 } block_dev;
 
 /////////////
@@ -96,14 +100,29 @@ static int create_block_device(block_dev *bDev)
 
     if (bDev)
     {
+        // Zeroize block_dev struct
+        memset(bDev, 0, sizeof(block_dev));
+        
+        // Initialize block_dev struct members
+        // 0. Size
+        bDev->totalSize = DEV_TOTAL_SIZE;
         // 1. Allocate a disk
         bDev->gd_ptr = alloc_disk(DEV_MAX_MINORS);
 
         if (bDev->gd_ptr)
         {
             printk(KERN_INFO "%s: Allocated gendisk struct\n", DEVICE_NAME);
-
-            // 2. Add that disk to the system
+            
+            // 2. Populate the gendisk struct
+            bDev->gd_ptr->major = major_number;
+            bDev->gd_ptr->first_minor = which * DEV_MAX_MINORS;  // which?  Which which?!
+            bDev->gd_ptr->fops = NULL;  // Example: &sbull_ops;
+            bDev->gd_ptr->queue = NULL;  // Example: dev->queue
+            bDev->gd_ptr->private_data = bDev;
+            snprintf(bDev->gd_ptr->disk_name, 32, "virtBlockDev0%c", which + 'a');
+            set_capacity(bDev->gd_ptr, bDev->totalSize/KERNEL_SECTOR_SIZE);
+            
+            // 3. Add that disk to the system
             add_disk(bDev->gd_ptr);
             printk(KERN_INFO "%s: Added gendisk to system\n", DEVICE_NAME);
         }
@@ -148,4 +167,9 @@ MODULE_VERSION("0.1");  // Not yet releasable
     operation was called on the device but the associated release operation has not been 
     called). One solution is to keep the number of users of the device and call the 
     del_gendisk() function only when there are no users left of the device.
+ */
+
+/*
+    TODO:
+        [ ] Incorporate DEV_TOTAL_SIZE into the Makefile's lkm recipe instead of using hard-coded macro
  */

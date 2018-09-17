@@ -31,6 +31,7 @@ typedef struct _block_dev
 /////////////
 int major_number = DEV_MAJOR_NUM;               // Will store our major number - returned by register_blkdev()
 block_dev thisBDev;                             // Will store information about this block device
+struct device fakeParent;                       // DEBUGGING - Attempting to avoid unable to handle kernel NULL pointer dereference device_add_disk()
 
 /////////////////////////
 /* FUNCTION PROTOTYPES */
@@ -104,7 +105,10 @@ static int create_block_device(block_dev *bDev)
             printk(KERN_INFO "%s: Allocated gendisk struct\n", DEVICE_NAME);
 
             // 2. Add that disk to the system
-            add_disk(bDev->gd_ptr);
+            printk(KERN_INFO "%s: struct gendisk pointer %p\n", DEVICE_NAME, bDev->gd_ptr);
+            // add_disk(bDev->gd_ptr);  // DEBUGGING - Attempting to avoid unable to handle kernel NULL pointer dereference device_add_disk()
+            // DEBUGGING - Attempting to avoid unable to handle kernel NULL pointer dereference device_add_disk()
+            device_add_disk(&fakeParent, bDev->gd_ptr);
             printk(KERN_INFO "%s: Added gendisk to system\n", DEVICE_NAME);
         }
         else

@@ -31,12 +31,6 @@ typedef struct _block_dev
     int totalSize;                              // Total size
 } block_dev;
 
-/////////////
-/* GLOBALS */
-/////////////
-int major_number = DEV_MAJOR_NUM;               // Will store our major number - returned by register_blkdev()
-block_dev thisBDev;                             // Will store information about this block device
-
 /////////////////////////
 /* FUNCTION PROTOTYPES */
 /////////////////////////
@@ -48,6 +42,26 @@ static void __exit block_driver_exit(void);
 static int create_block_device(block_dev *bDev);
 // PURPOSE - Remove the gendisk from the system
 static void delete_block_device(block_dev *bDev);
+// PURPOSE - 
+// NOTE - Could be called from user space or kernel space.  There's no way to know.
+//  User Space Usage - partitioning a disk, building a filesystem, running a filesystem check
+//  Kernel Space Usage - mount operation
+static int open_block_device(struct block_device *bdev, fmode_t mode);
+// PURPOSE - 
+static int release_block_device(struct gendisk *gd, fmode_t mode);
+
+/////////////
+/* GLOBALS */
+/////////////
+int major_number = DEV_MAJOR_NUM;               // Will store our major number - returned by register_blkdev()
+block_dev thisBDev;                             // Will store information about this block device
+struct block_device_operations blockDevOps = {
+    .owner = THIS_MODULE,
+    .open = open_block_device,
+    .release = release_block_device
+};
+
+
 
 //////////////////////////
 /* FUNCTION DEFINITIONS */
@@ -117,8 +131,8 @@ static int create_block_device(block_dev *bDev)
             // 2. Populate the gendisk struct
             bDev->gd_ptr->major = major_number;
             bDev->gd_ptr->first_minor = which * DEV_MAX_MINORS;  // which?  Which which?!
-            bDev->gd_ptr->fops = NULL;  // Example: &sbull_ops;
-            bDev->gd_ptr->queue = bDev->reqQue;
+            bDev->gd_ptr->fops = &blockDevOps;  // Block device file operations struct pointer
+            bDev->gd_ptr->queue = bDev->reqQue;  // Block device request queue
             bDev->gd_ptr->private_data = bDev;
             snprintf(bDev->gd_ptr->disk_name, 32, "virtBlockDev0%c", which + 'a');
             set_capacity(bDev->gd_ptr, bDev->totalSize/KERNEL_SECTOR_SIZE);

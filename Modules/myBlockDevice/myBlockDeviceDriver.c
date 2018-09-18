@@ -26,6 +26,7 @@
 //////////////
 typedef struct _block_dev
 {
+    struct request_queue *reqQue;               // The device request queue
     struct gendisk *gd_ptr;                     // Kernel’s representation of an individual disk device
     int totalSize;                              // Total size
 } block_dev;
@@ -117,7 +118,7 @@ static int create_block_device(block_dev *bDev)
             bDev->gd_ptr->major = major_number;
             bDev->gd_ptr->first_minor = which * DEV_MAX_MINORS;  // which?  Which which?!
             bDev->gd_ptr->fops = NULL;  // Example: &sbull_ops;
-            bDev->gd_ptr->queue = NULL;  // Example: dev->queue
+            bDev->gd_ptr->queue = bDev->reqQue;
             bDev->gd_ptr->private_data = bDev;
             snprintf(bDev->gd_ptr->disk_name, 32, "virtBlockDev0%c", which + 'a');
             set_capacity(bDev->gd_ptr, bDev->totalSize/KERNEL_SECTOR_SIZE);

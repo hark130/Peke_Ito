@@ -29,6 +29,7 @@ typedef struct _block_dev
     struct request_queue *reqQue;               // The device request queue
     struct gendisk *gd_ptr;                     // Kernel’s representation of an individual disk device
     int totalSize;                              // Total size
+    unsigned int numUsers;                      // Number of users that currently have this device "open"
 } block_dev;
 
 /////////////////////////
@@ -42,13 +43,13 @@ static void __exit block_driver_exit(void);
 static int create_block_device(block_dev *bDev);
 // PURPOSE - Remove the gendisk from the system
 static void delete_block_device(block_dev *bDev);
-// PURPOSE - 
-// NOTE - Could be called from user space or kernel space.  There's no way to know.
-//  User Space Usage - partitioning a disk, building a filesystem, running a filesystem check
-//  Kernel Space Usage - mount operation
+// PURPOSE - Prepare the device when it is opened
 static int open_block_device(struct block_device *bdev, fmode_t mode);
-// PURPOSE - 
+// PURPOSE - Called when the device is closed
 static int release_block_device(struct gendisk *gd, fmode_t mode);
+// NOTE - open() and release() could be called from user space or kernel space.  There's no way to know.
+//  User Space Usage - partitioning a disk, building a filesystem, running a filesystem check (e.g., mkfs)
+//  Kernel Space Usage - mount operation (e.g., mount)
 
 /////////////
 /* GLOBALS */
@@ -60,8 +61,6 @@ struct block_device_operations blockDevOps = {
     .open = open_block_device,
     .release = release_block_device
 };
-
-
 
 //////////////////////////
 /* FUNCTION DEFINITIONS */
@@ -119,8 +118,9 @@ static int create_block_device(block_dev *bDev)
         memset(bDev, 0, sizeof(block_dev));
         
         // Initialize block_dev struct members
-        // 0. Size
+        // 0. Size, Number of Users, etc
         bDev->totalSize = DEV_TOTAL_SIZE;
+        bDev->numUsers = 0;
         // 1. Allocate a disk
         bDev->gd_ptr = alloc_disk(DEV_MAX_MINORS);
 
@@ -162,6 +162,39 @@ static void delete_block_device(block_dev *bDev)
     {
         del_gendisk(bDev->gd_ptr);
     }
+    
+    return;
+}
+
+
+static int open_block_device(struct block_device *bdev, fmode_t mode)
+{
+    int retVal = 0;
+    
+    thisBDev.numUsers++;  // Incrementing running count of users
+    printk(KERN_INFO "%s: Opened - module currently has %d users\n", DEVICE_NAME, thisBDev.numUsers);
+    
+    return retVal;
+}
+
+
+static int release_block_device(struct gendisk *gd, fmode_t mode)
+{
+    int retVal = 0;
+    
+    // Decrementing running count of users
+    if (thisBDev.numUsers > 0)
+    {
+        thisBDev.numUsers--;
+        printk(KERN_INFO "%s: Released - module currently has %d users\n", DEVICE_NAME, thisBDev.numUsers);
+    }
+    else
+    {
+        printk(KERN_ERR "%s: Released - module detected an invalid number of users... reset to 0\n", DEVICE_NAME);
+        thisBDev.numUsers = 0;
+    }
+    
+    return retVal;
 }
 
 

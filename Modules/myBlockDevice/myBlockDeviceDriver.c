@@ -131,6 +131,7 @@ static int create_block_device(block_dev *bDev)
             // 2. Populate the gendisk struct
             bDev->gd_ptr->major = major_number;
             bDev->gd_ptr->first_minor = which * DEV_MAX_MINORS;  // which?  Which which?!
+            bDev->gd_ptr->minors = 1;  // 1 for non-partitionable devices
             bDev->gd_ptr->fops = &blockDevOps;  // Block device file operations struct pointer
             bDev->gd_ptr->queue = bDev->reqQue;  // Block device request queue
             bDev->gd_ptr->private_data = bDev;

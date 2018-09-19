@@ -23,9 +23,10 @@
 	- [A Simple Block Driver for Linux Kernel 2.6.31](https://blog.superpat.com/2010/05/04/a-simple-block-driver-for-linux-kernel-2-6-31/)
 	- [Virtual Linux block device driver for simulating and performing I/O](https://github.com/rgolubtsov/virtblkiosim)
 	- [The Linux Kernel - Block Device Drivers](https://linux-kernel-labs.github.io/master/labs/block_device_drivers.html)
-	- [Linux Journal - An introduction to block device drivers](https://www.linuxjournal.com/article/2890)
+	- [Full sbull example](https://github.com/tatetian/linux-driver-examples/tree/master/sbull)
 	- [Block Drivers](https://bootlin.com/doc/legacy/block-drivers/block_drivers.pdf)
 	- [Block Drivers Sarah Diesburg COP 5641](www.cs.uni.edu/~diesburg/courses/dd/notes/lecture_block.ppt)
+	- [Linux Device Drivers Ch 12](https://www.xml.com/ldd/chapter/book/ch12.html)
 
 ## Notes
 

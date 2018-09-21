@@ -15,6 +15,10 @@
 
     [ ] 1. Take an absolute filename as a parameter
     [ ] 2. Create a /dev/ to provide output
+    
+[ ] Advanced Functionality
+
+    [ ] 1. Support for multiple CPUs(?)
 
 ### SPECIFIC RESOURCES
 

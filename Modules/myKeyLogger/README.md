@@ -1,10 +1,10 @@
 ## KEY LOGGING LINUX KERNEL MODULE (LKM)
 
 ### TO DO
-[ ] Basic Driver Framework
+[X] Basic Driver Framework
 
-    [ ] 1. Makefile    
-    [ ] 2. Basic compilable shell
+    [X] 1. Makefile    
+    [X] 2. Basic compilable shell
     
 [ ] Basic Functionality
 

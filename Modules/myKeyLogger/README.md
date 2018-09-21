@@ -2,12 +2,17 @@
 
 ### TO DO
 [ ] Basic Driver Framework
-    [ ] 1. Makefile
+
+    [ ] 1. Makefile    
     [ ] 2. Basic compilable shell
+    
 [ ] Basic Functionality
+
     [ ] 1. Print keystroke
     [ ] 2. Save keystroke to file
+    
 [ ] Enhanced Functionality
+
     [ ] 1. Take an absolute filename as a parameter
     [ ] 2. Create a /dev/ to provide output
 

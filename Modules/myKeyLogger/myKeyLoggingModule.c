@@ -50,18 +50,15 @@ static int __init key_logger_init(void)
 
 static void __exit key_logger_exit(void)
 {
-    int retVal = 0;
-
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloading");
     // Code here
     
     // DONE
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloaded");
-    return retVal;
 }
 
-module_init(block_driver_init);
-module_exit(block_driver_exit);
+module_init(key_logger_init);
+module_exit(key_logger_exit);
 
 ////////////////////////
 /* DRIVER INFORMATION */

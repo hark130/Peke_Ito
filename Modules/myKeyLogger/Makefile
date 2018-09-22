@@ -1,4 +1,6 @@
 MY_LKM = myKeyLoggingModule
+MY_INC_DIR = $(src)/../../Include
+ccflags-y := -I$(MY_INC_DIR)
 obj-m += $(MY_LKM).o
 
 # Ubuntu

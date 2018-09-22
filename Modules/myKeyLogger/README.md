@@ -8,8 +8,9 @@
     
 [ ] Basic Functionality
 
-    [ ] 1. Print keystroke
-    [ ] 2. Save keystroke to file
+    [X] 1. Implement code translation
+    [ ] 2. Print keystroke
+    [ ] 3. Save keystroke to file
     
 [ ] Enhanced Functionality
 

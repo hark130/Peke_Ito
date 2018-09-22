@@ -9,19 +9,23 @@
 [ ] Basic Functionality
 
     [X] 1. Implement code translation
-    [ ] 2. Print keystroke
-    [ ] 3. Save keystroke to file
+    [ ] 2. Implement File I/O
+    [ ] 3. Print keystroke
+    [ ] 4. Save keystroke to file
     
 [ ] Enhanced Functionality
 
     [ ] 1. Take an absolute filename as a parameter
-    [ ] 2. Create a /dev/ to provide output
+    [ ] 2. [Create a /dev/ to provide output](http://cs.smith.edu/~nhowe/262/oldlabs/module.html)
     
 [ ] Advanced Functionality
 
-    [ ] 1. Support for multiple CPUs(?)
+    [ ] * Support for multiple CPUs(?)
+    [ ] * Allow file operations to append instead of overwriting
 
 ### SPECIFIC RESOURCES
+
+#### Key Loggers
 
 - [Find the section on key loggers](derekmolloy.ie/writing-a-linux-kernel-module-part-1-introduction/)
 - [jarun/keysniffer saves to file](https://github.com/jarun/keysniffer/blob/master/keysniffer.c)
@@ -31,6 +35,10 @@
 - [kernc/logkeys deep solution](https://github.com/kernc/logkeys)
 - [faineance/keyer hides itself?!](https://github.com/faineance/keyer)
 - [jemtucker/qlog has last events?](https://github.com/jemtucker/qlog/blob/master/src/keylogger.c)
+
+#### Kernel File I/O
+
+- [How to write to a file from a kernel module](http://krishnamohanlinux.blogspot.com/2013/12/how-to-write-to-file-from-kernel-module.html)
 
 ### NOTES
 

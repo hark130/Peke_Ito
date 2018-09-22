@@ -40,4 +40,4 @@ test:
 	sudo insmod $(MY_LKM).ko
 
 	# Display the kernel log
-    dmesg
+	dmesg

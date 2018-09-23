@@ -9,7 +9,7 @@
 [ ] Basic Functionality
 
     [X] 1. Implement code translation
-    [ ] 2. Implement File I/O
+    [X] 2. Implement File I/O
     [ ] 3. Print keystroke
     [ ] 4. Save keystroke to file
     

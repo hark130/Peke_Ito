@@ -39,6 +39,8 @@
 #### Kernel File I/O
 
 - [How to write to a file from a kernel module](http://krishnamohanlinux.blogspot.com/2013/12/how-to-write-to-file-from-kernel-module.html)
+- [vfs_write behavior in O_APPEND mode](https://stackoverflow.com/questions/35451081/linux-kernel-is-vfs-write-thread-safe)
+- [file_pos_write updates file->f_pos](https://elixir.bootlin.com/linux/latest/source/fs/read_write.c#L584)
 
 ### NOTES
 

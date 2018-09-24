@@ -6,17 +6,17 @@
     [X] 1. Makefile    
     [X] 2. Basic compilable shell
     
-[ ] Basic Functionality
+[X] Basic Functionality
 
     [X] 1. Implement code translation
     [X] 2. Implement File I/O
-    [ ] 3. Print keystroke
-    [ ] 4. Save keystroke to file
+    [X] 3. Print keystroke
+    [X] 4. Save keystroke to file
     
 [ ] Enhanced Functionality
 
     [ ] 1. Take an absolute filename as a parameter
-    [ ] 2. [Create a /dev/ to provide output](http://cs.smith.edu/~nhowe/262/oldlabs/module.html)
+    [ ] 2. [Create a character device to provide output](http://cs.smith.edu/~nhowe/262/oldlabs/module.html)
     
 [ ] Advanced Functionality
 

@@ -21,7 +21,7 @@
 [ ] Advanced Functionality
 
     [ ] * Support for multiple CPUs(?)
-    [ ] * Allow file operations to append instead of overwriting
+    [X] * Allow file operations to append instead of overwriting
 
 ### SPECIFIC RESOURCES
 

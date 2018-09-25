@@ -11,13 +11,6 @@
 #define CHRDEV_NAME "My Log Device"            // Use this macro to log the character device
 #define BUFF_SIZE 16                           // Size of the out buffer
 
-// LOGGING //
-#define DEF_LOG_FILENAME "/tmp/myKeyLog.txt"
-#define DEF_LOG_FLAGS O_WRONLY | O_CREAT | O_APPEND
-#define DEF_LOG_PERMS S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH
-#define DEF_LOG_INIT_MSG "***INITIALIZING LOG***\n"
-#define DEF_LOG_CLOSE_MSG "\n***CLOSING LOG***\n"
-
 // CHAR DEVICE //
 #define CDEV_BUFF_SIZE 511
 

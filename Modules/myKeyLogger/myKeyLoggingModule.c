@@ -990,7 +990,8 @@ ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff
         }
         else
         {
-            printk(KERN_DEBUG "%s: Device is empty", CHRDEV_NAME);  // DEBUGGING
+            // printk(KERN_DEBUG "%s: Device is empty", CHRDEV_NAME);  // DEBUGGING
+            HARKLE_KFINFO(CHRDEV_NAME, device_read, "Device is empty");
         }
     }
     

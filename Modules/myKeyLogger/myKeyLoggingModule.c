@@ -582,9 +582,13 @@ void tasklet_logger(unsigned long data)
         if (msgLen > 0)
         {
             // static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
-            if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
+            tempRetVal = write_to_chrdev(&myLD, myKL.keyStr);
+            if (msgLen != tempRetVal)
+            // if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
             {
                 HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_to_chrdev() has failed");  // DEBUGGING
+                printk(KERN_INFO "%s: write_to_chrdev() returned %d\n", DEVICE_NAME, tempRetVal);  // DEBUGGING
+                printk(KERN_INFO "%s: The message is of length %d\n", DEVICE_NAME, msgLen);  // DEBUGGING
             }
         }
     }
@@ -662,9 +666,13 @@ int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_para
             if (msgLen > 0)
             {
                 // static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
-                if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
+                tempRetVal = write_to_chrdev(&myLD, myKL.keyStr);
+                if (msgLen != tempRetVal)
+                // if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
                 {
                     HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_to_chrdev() has failed");  // DEBUGGING
+                    printk(KERN_INFO "%s: write_to_chrdev() returned %d\n", DEVICE_NAME, tempRetVal);  // DEBUGGING
+                    printk(KERN_INFO "%s: The message is of length %d\n", DEVICE_NAME, msgLen);  // DEBUGGING
                 }
             }
         }
@@ -1019,7 +1027,7 @@ static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf)
         }
         else
         {
-            HARKLE_KFINFO(CHRDEV_NAME, write_to_chrdev, "Device 'busy'");  // DEBUGGING
+            // HARKLE_KFINFO(CHRDEV_NAME, write_to_chrdev, "Device is locked while the kernel writes to it");  // DEBUGGING
 
             // 1. Size the input buffer
             srcLen = strlen(srcBuf);
@@ -1046,6 +1054,7 @@ static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf)
             {
                 *(tmp_ptr + srcLen + 1) = 0;  // Nul terminate it... for safety
                 dstDev->bufLength += srcLen;  // Increase the buffer length
+                retVal = srcLen;
             }
 
             // Release the lock

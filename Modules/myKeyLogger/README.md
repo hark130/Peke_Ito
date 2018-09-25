@@ -16,7 +16,7 @@
 [ ] Enhanced Functionality
 
     [ ] 1. Take an absolute filename as a parameter
-    [ ] 2. [Create a character device to provide output](http://cs.smith.edu/~nhowe/262/oldlabs/module.html)
+    [X] 2. [Create a character device to provide output](http://cs.smith.edu/~nhowe/262/oldlabs/module.html)
     
 [ ] Advanced Functionality
 

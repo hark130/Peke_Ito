@@ -19,18 +19,18 @@
 /////////////
 // Do not change the order of these includes unless you want:
 // ./arch/x86/include/asm/uaccess.h:28:26: error: dereferencing pointer to incomplete type ‘struct task_struct’
-#include <asm/current.h>                        // current
-#include <linux/cred.h>                         // ???
+// #include <asm/current.h>                        // current
+// #include <linux/cred.h>                         // ???
 
-#include <asm/uaccess.h>                        // get_fs(), set_fs()
+// #include <asm/uaccess.h>                        // get_fs(), set_fs()
 #include "HarkleKerror.h"                       // Kernel error macros
 #include <linux/cdev.h>                         // cdev available
-#include <linux/fcntl.h>                        // filp_open(), filp_close()
+// #include <linux/fcntl.h>                        // filp_open(), filp_close()
 #include <linux/fs.h>                           // Defines file table structures
 #include <linux/kernel.h>                       // ALWAYS NEED
 #include <linux/module.h>                       // ALWAYS NEED
 #include <linux/semaphore.h>                    // semaphores
-#include <linux/stat.h>                         // File mode macros
+// #include <linux/stat.h>                         // File mode macros
 #include <linux/uaccess.h>                      // copy_to_user
 #include <linux/keyboard.h>                     // register_keyboard_notifier(), unregister_keyboard_notifier()
 

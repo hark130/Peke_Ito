@@ -16,6 +16,23 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
     4.  sudo rmmod hid_led
     5.  sudo rmmod hid
     6.  sudo insmod blinkDeviceDriver.ko
+### Key Logger v1.0
+#### BRIEF
+
+- Creates /dev/notakeylogger to communicate with a user
+- Registers a module with the keyboard driver's notification list
+- Translates those scan codes into a buffer backing /dev/notakeylogger
+- Key strokes may be read from /dev/notakeylogger
+
+#### USAGE
+
+1. ```cd Modules/myKeyLogger; make clean; make lkm```
+2. ```sudo insmod myKeyLoggingModule.ko```
+3. Type things
+4. ```sudo cat /dev/notakeylogger```
+5. Type more things
+6. ```sudo cat /dev/notakeylogger```
+7. ```sudo rmmod myKeyLoggingModule```
 
 ## To Do
     [X] Hello World lkm

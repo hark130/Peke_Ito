@@ -24,7 +24,7 @@
 #define DEF_LOG_INIT_MSG "***INITIALIZING LOG***\n"
 #define DEF_LOG_CLOSE_MSG "\n***CLOSING LOG***\n"
 
-#define SOLUTION 1
+#define SOLUTION 2
 #if SOLUTION == 1
 // SOLUTION #1 - ISR4IRQ
 // Intel-specific magic numbers

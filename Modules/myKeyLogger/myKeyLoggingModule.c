@@ -578,10 +578,6 @@ ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff
             numBytesToRead = myLD.bufLength;
         }
 
-        // printk(KERN_DEBUG "%s: bufCount is %lu\n", CHRDEV_NAME, bufCount);  // DEBUGGING
-        // printk(KERN_DEBUG "%s: myLD.bufLength is %lu\n", CHRDEV_NAME, myLD.bufLength);  // DEBUGGING
-        // printk(KERN_DEBUG "%s: Attempting to pass %lu bytes to the user", CHRDEV_NAME, numBytesToRead);  // DEBUGGING
-
         if (myLD.bufLength > 0)
         {
             tempRetVal = copy_to_user(bufStoreData, myLD.logBuf, numBytesToRead);
@@ -620,14 +616,12 @@ ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff
             else
             {
                 HARKLE_KERROR(CHRDEV_NAME, device_read, "copy_to_user() failed to copy all the bytes");  // DEBUGGING
-                printk(KERN_DEBUG "%s: Failed to copy %lu bytes\n", CHRDEV_NAME, tempRetVal);  // DEBUGGING
-                // printk(KERN_DEBUG "%s: Log device buffer currently holds '%s'\n", CHRDEV_NAME, myLD.logBuf);  // DEBUGGING
+                // printk(KERN_DEBUG "%s: Failed to copy %lu bytes\n", CHRDEV_NAME, tempRetVal);  // DEBUGGING
                 retVal = numBytesToRead - tempRetVal;  // Return the number of bytes read
             }
         }
         else
         {
-            // printk(KERN_DEBUG "%s: Device is empty", CHRDEV_NAME);  // DEBUGGING
             HARKLE_KFINFO(CHRDEV_NAME, device_read, "Device is empty");
         }
     }
@@ -678,8 +672,6 @@ static int write_to_chrdev(myLogDevice_ptr dstDev, char *srcBuf)
         }
         else
         {
-            // HARKLE_KFINFO(CHRDEV_NAME, write_to_chrdev, "Device is locked while the kernel writes to it");  // DEBUGGING
-
             // 1. Size the input buffer
             srcLen = strlen(srcBuf);
 

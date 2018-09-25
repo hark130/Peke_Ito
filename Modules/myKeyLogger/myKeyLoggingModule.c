@@ -941,43 +941,55 @@ ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff
             numBytesToRead = myLD.bufLength;
         }
 
-        tempRetVal = copy_to_user(bufStoreData, myLD.logBuf, numBytesToRead);
+        printk(KERN_DEBUG "%s: bufCount is %lu\n", CHRDEV_NAME, bufCount);  // DEBUGGING
+        printk(KERN_DEBUG "%s: myLD.bufLength is %lu\n", CHRDEV_NAME, myLD.bufLength);  // DEBUGGING
+        printk(KERN_DEBUG "%s: Attempting to pass %lu bytes to the user", CHRDEV_NAME, numBytesToRead);  // DEBUGGING
 
-        // Success
-        if (!tempRetVal)
+        if (myLD.bufLength > 0)
         {
-            // Everything was read
-            if (numBytesToRead == myLD.bufLength)
+            tempRetVal = copy_to_user(bufStoreData, myLD.logBuf, numBytesToRead);
+
+            // Success
+            if (!tempRetVal)
             {
-                HARKLE_KFINFO(CHRDEV_NAME, device_read, "Total read executed");
-                retVal = numBytesToRead;
-                myLD.logBuf[0] = 0;  // Truncate current contents
-                myLD.bufLength = 0;  // Indicate the buffer is empty
-            }
-            // Partial read
-            else
-            {
-                HARKLE_KFINFO(CHRDEV_NAME, device_read, "Partial read executed");
-                // Save the return value
-                retVal = numBytesToRead;
-                // Move everything to the front
-                while (numBytesToRead < myLD.bufLength)
+                // Everything was read
+                if (numBytesToRead == myLD.bufLength)
                 {
-                    myLD.logBuf[i] = myLD.logBuf[numBytesToRead];
-                    i++;
-                    numBytesToRead++;
+                    HARKLE_KFINFO(CHRDEV_NAME, device_read, "Total read executed");
+                    retVal = numBytesToRead;
+                    myLD.logBuf[0] = 0;  // Truncate current contents
+                    myLD.bufLength = 0;  // Indicate the buffer is empty
                 }
-                // Truncate it
-                myLD.logBuf[numBytesToRead] = 0;
-                // Reset the buffer length
-                myLD.bufLength = 0;
+                // Partial read
+                else
+                {
+                    HARKLE_KFINFO(CHRDEV_NAME, device_read, "Partial read executed");
+                    // Save the return value
+                    retVal = numBytesToRead;
+                    // Move everything to the front
+                    while (numBytesToRead < myLD.bufLength)
+                    {
+                        myLD.logBuf[i] = myLD.logBuf[numBytesToRead];
+                        i++;
+                        numBytesToRead++;
+                    }
+                    // Truncate it
+                    myLD.logBuf[numBytesToRead] = 0;
+                    // Reset the buffer length
+                    myLD.bufLength = 0;
+                }
+            }
+            // Error condition
+            {
+                HARKLE_KERROR(CHRDEV_NAME, device_read, "copy_to_user() failed to copy all the bytes");  // DEBUGGING
+                printk(KERN_DEBUG "%s: Failed to copy %lu bytes\n", CHRDEV_NAME, tempRetVal);  // DEBUGGING
+                printk(KERN_DEBUG "%s: Log device buffer currently holds '%s'\n", CHRDEV_NAME, myLD.logBuf);  // DEBUGGING
+                retVal = numBytesToRead - tempRetVal;  // Return the number of bytes read
             }
         }
-        // Error condition
+        else
         {
-            HARKLE_KERROR(CHRDEV_NAME, device_read, "copy_to_user() failed to copy all the bytes");  // DEBUGGING
-            printk(KERN_DEBUG "%s: Failed to copy %lu bytes\n", CHRDEV_NAME, tempRetVal);
-            retVal = numBytesToRead - tempRetVal;  // Return the number of bytes read
+            printk(KERN_DEBUG "%s: Device is empty", CHRDEV_NAME);  // DEBUGGING
         }
     }
     

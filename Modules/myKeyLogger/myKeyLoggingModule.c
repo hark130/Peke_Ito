@@ -941,9 +941,9 @@ ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff
             numBytesToRead = myLD.bufLength;
         }
 
-        printk(KERN_DEBUG "%s: bufCount is %lu\n", CHRDEV_NAME, bufCount);  // DEBUGGING
-        printk(KERN_DEBUG "%s: myLD.bufLength is %lu\n", CHRDEV_NAME, myLD.bufLength);  // DEBUGGING
-        printk(KERN_DEBUG "%s: Attempting to pass %lu bytes to the user", CHRDEV_NAME, numBytesToRead);  // DEBUGGING
+        // printk(KERN_DEBUG "%s: bufCount is %lu\n", CHRDEV_NAME, bufCount);  // DEBUGGING
+        // printk(KERN_DEBUG "%s: myLD.bufLength is %lu\n", CHRDEV_NAME, myLD.bufLength);  // DEBUGGING
+        // printk(KERN_DEBUG "%s: Attempting to pass %lu bytes to the user", CHRDEV_NAME, numBytesToRead);  // DEBUGGING
 
         if (myLD.bufLength > 0)
         {
@@ -980,10 +980,11 @@ ssize_t device_read(struct file* filp, char* bufStoreData, size_t bufCount, loff
                 }
             }
             // Error condition
+            else
             {
                 HARKLE_KERROR(CHRDEV_NAME, device_read, "copy_to_user() failed to copy all the bytes");  // DEBUGGING
                 printk(KERN_DEBUG "%s: Failed to copy %lu bytes\n", CHRDEV_NAME, tempRetVal);  // DEBUGGING
-                printk(KERN_DEBUG "%s: Log device buffer currently holds '%s'\n", CHRDEV_NAME, myLD.logBuf);  // DEBUGGING
+                // printk(KERN_DEBUG "%s: Log device buffer currently holds '%s'\n", CHRDEV_NAME, myLD.logBuf);  // DEBUGGING
                 retVal = numBytesToRead - tempRetVal;  // Return the number of bytes read
             }
         }

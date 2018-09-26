@@ -1,9 +1,9 @@
 /*
     REPO:        Peke_Ito (https://github.com/hark130/Peke_Ito/)
-    FILE:        myKeyLoggingModule.c
-    PURPOSE:     A block device driver for a virtual block device of my own creation
-    DATE:        Updated 20180925
-    VERSION:     1.0.0
+    FILE:        myProcessModule.c
+    PURPOSE:     A basic process management Linux Kernel Module
+    DATE:        Updated 20180926
+    VERSION:     0.0.1
  */
 
 ////////////

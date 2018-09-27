@@ -9,8 +9,12 @@
 [ ] Basic Functionality
 
     [X] 1. List running processes
-    [ ] 2. Resolve name -> PID
+    [X] 2. Resolve name -> PID
     [ ] 3. Resolve PID -> name
+
+[ ] Enhanced Functionality
+
+	[ ] 1. Max length for process names?
 
 ### SPECIFIC RESOURCES
 

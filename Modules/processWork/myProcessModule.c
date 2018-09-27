@@ -12,6 +12,7 @@
 
 // GENERAL //
 #define DEVICE_NAME "My Process Module"        // Use this macro for logging
+#define MAX_PROC_NAME_LEN 15                   // There appears to be a max length for process names?
 // Sample OS-agnostic(?) process names to attempt to resolve
 #define process1 "bash"
 #define process2 "sshd"
@@ -24,7 +25,7 @@
 #include <linux/kernel.h>                       // ALWAYS NEED
 #include <linux/module.h>                       // ALWAYS NEED
 #include <linux/sched/signal.h>                 // for_each_process
-#include <linux/string.h>                       // memset()
+#include <linux/string.h>                       // memset(), strncmp()
 
 //////////////
 /* TYPEDEFS */
@@ -42,8 +43,11 @@ static int __init kernel_module_init(void);
 // PURPOSE - LKM exit function
 static void __exit kernel_module_exit(void);
 // PURPOSE - Log information about all running processes
-// RETURN - Num of processes on success, -1 for error
+// RETURN - Num of processes on success, -1 on error
 int log_processes(void);
+// PURPOSE - Resolve a process name into a PID
+// RETURN - PID on success, -1 on error
+int name_lookup(char *procName);
 
 /////////////
 /* GLOBALS */
@@ -56,7 +60,7 @@ myProcDevice myPD;
 static int __init kernel_module_init(void)
 {
     int retVal = 0;
-    int numProc = 0;  // Return value from log_processes
+    int tempRet = 0;  // Return value from some process-related functions
     
     HARKLE_KINFO(DEVICE_NAME, "Process module loading");  // DEBUGGING
 
@@ -72,16 +76,24 @@ static int __init kernel_module_init(void)
     ////////////////////////
     // DO SOMETHING BASIC //
     ////////////////////////
-    numProc = log_processes();
-
-    if (-1 == numProc)
+    // 1. List all processes
+    tempRet = log_processes();
+    if (-1 == tempRet)
     {
         HARKLE_KERROR(DEVICE_NAME, kernel_module_init, "log processes() failed");
     }
     else
     {
-        printk(KERN_INFO "%s: There are currently %d running processes\n", DEVICE_NAME, numProc);
+        printk(KERN_INFO "%s: There are currently %d running processes\n", DEVICE_NAME, tempRet);
     }
+
+    // 2. Resolve some names
+    tempRet = name_lookup(process1);
+    printk(KERN_INFO "%s: Process '%s' has PID %d\n", DEVICE_NAME, process1, tempRet);
+    tempRet = name_lookup(process2);
+    printk(KERN_INFO "%s: Process '%s' has PID %d\n", DEVICE_NAME, process2, tempRet);
+    tempRet = name_lookup(process3);
+    printk(KERN_INFO "%s: Process '%s' has PID %d\n", DEVICE_NAME, process3, tempRet);
 
     //////////
     // DONE //
@@ -110,6 +122,44 @@ int log_processes(void)
     {
         printk(KERN_INFO "%s: %s [%d]\n", DEVICE_NAME, task->comm, task->pid);
         retVal++;
+    }
+
+    return retVal;
+}
+
+int name_lookup(char *procName)
+{
+    // LOCAL VARIABLES
+    int retVal = 0;
+    struct task_struct *task;
+    size_t procNameLen = 0;  // Length of procName
+
+    // INPUT VALIDATION
+    if (!procName)
+    {
+        retVal = -1;
+        HARKLE_KERROR(DEVICE_NAME, name_lookup, "NULL pointer");
+    }
+    else if (!(*procName))
+    {
+        retVal = -1;
+        HARKLE_KERROR(DEVICE_NAME, name_lookup, "Empty process name");
+    }
+    else
+    {
+        procNameLen = strlen(procName);
+
+        for_each_process(task)
+        {
+            if (task->comm)
+            {
+                if (!strncmp(procName, task->comm, procNameLen))
+                {
+                    retVal = task->pid;  // Found it
+                    break;  // Stop looking
+                }
+            }
+        }
     }
 
     return retVal;

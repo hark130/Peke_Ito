@@ -16,7 +16,7 @@
 #ifdef HARKLE_KDEBUG
 #define HARKLE_KERROR(module, funcName, errMsg) do { printk(KERN_ERR "%s: <<<ERROR>>> %s - %s\n", module, #funcName, errMsg); } while (0);
 #define HARKLE_KERRNO(module, funcName, errNum) do { printk(KERN_ERR "%s: <<<ERRNO>>> %s() returned errno: %d!\n", module, #funcName, errNum); } while (0);
-#define HARKLE_KWARNG(module, funcName, warnMsg) do { printk(KERN_WARNING "¿¿¿WARNING??? - %s - %s() - %s!\n", module, #funcName, warnMsg); } while (0);
+#define HARKLE_KWARNG(module, funcName, warnMsg) do { printk(KERN_WARNING "%s: ¿¿¿WARNING??? %s() - %s!\n", module, #funcName, warnMsg); } while (0);
 #define HARKLE_KFINFO(module, funcName, msg) do { printk(KERN_INFO "%s: %s - %s\n", module, #funcName, msg); } while (0);
 #define HARKLE_KINFO(module, msg) do { printk(KERN_INFO "%s: %s\n", module, msg); } while (0);
 #else

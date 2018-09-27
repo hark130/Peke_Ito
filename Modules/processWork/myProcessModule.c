@@ -12,6 +12,10 @@
 
 // GENERAL //
 #define DEVICE_NAME "My Process Module"        // Use this macro for logging
+// Sample OS-agnostic(?) process names to attempt to resolve
+#define process1 "bash"
+#define process2 "sshd"
+#define process3 "systemd"
 
 /////////////
 /* HEADERS */
@@ -19,6 +23,7 @@
 #include "HarkleKerror.h"                       // Kernel error macros
 #include <linux/kernel.h>                       // ALWAYS NEED
 #include <linux/module.h>                       // ALWAYS NEED
+#include <linux/sched/signal.h>                 // for_each_process
 #include <linux/string.h>                       // memset()
 
 //////////////
@@ -36,6 +41,9 @@ typedef struct _myProcDevice
 static int __init kernel_module_init(void);
 // PURPOSE - LKM exit function
 static void __exit kernel_module_exit(void);
+// PURPOSE - Log information about all running processes
+// RETURN - Num of processes on success, -1 for error
+int log_processes(void);
 
 /////////////
 /* GLOBALS */
@@ -48,6 +56,7 @@ myProcDevice myPD;
 static int __init kernel_module_init(void)
 {
     int retVal = 0;
+    int numProc = 0;  // Return value from log_processes
     
     HARKLE_KINFO(DEVICE_NAME, "Process module loading");  // DEBUGGING
 
@@ -58,6 +67,20 @@ static int __init kernel_module_init(void)
     if (&myPD != memset(&myPD, 0x0, sizeof(myProcDevice)))
     {
         HARKLE_KERROR(DEVICE_NAME, kernel_module_init, "memset() failed");
+    }
+
+    ////////////////////////
+    // DO SOMETHING BASIC //
+    ////////////////////////
+    numProc = log_processes();
+
+    if (-1 == numProc)
+    {
+        HARKLE_KERROR(DEVICE_NAME, kernel_module_init, "log processes() failed");
+    }
+    else
+    {
+        printk(KERN_INFO "%s: There are currently %d running processes\n", DEVICE_NAME, numProc);
     }
 
     //////////
@@ -76,6 +99,20 @@ static void __exit kernel_module_exit(void)
     //////////
     HARKLE_KINFO(DEVICE_NAME, "Process module unloaded");  // DEBUGGING
     return;
+}
+
+int log_processes(void)
+{
+    int retVal = 0;
+    struct task_struct *task;
+
+    for_each_process(task)
+    {
+        printk(KERN_INFO "%s: %s [%d]\n", DEVICE_NAME, task->comm, task->pid);
+        retVal++;
+    }
+
+    return retVal;
 }
 
 module_init(kernel_module_init);

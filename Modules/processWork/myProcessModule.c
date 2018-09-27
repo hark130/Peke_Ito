@@ -17,6 +17,9 @@
 #define process1 "bash"
 #define process2 "sshd"
 #define process3 "systemd"
+#define PID1 1                                  // systemd?
+#define PID2 2                                  // kthreadd?
+#define PID3 4                                  // kworker?
 
 /////////////
 /* HEADERS */
@@ -48,6 +51,9 @@ int log_processes(void);
 // PURPOSE - Resolve a process name into a PID
 // RETURN - PID on success, -1 on error
 int name_lookup(char *procName);
+// PURPOSE - Resolve a PID to a process name
+// RETURN - Name on success, NULL if not found, NULL on error
+const char *PID_lookup(int PIDnum);
 
 /////////////
 /* GLOBALS */
@@ -61,6 +67,7 @@ static int __init kernel_module_init(void)
 {
     int retVal = 0;
     int tempRet = 0;  // Return value from some process-related functions
+    const char *tmp_ptr = NULL;  // Return value from PID_lookup
     
     HARKLE_KINFO(DEVICE_NAME, "Process module loading");  // DEBUGGING
 
@@ -94,6 +101,14 @@ static int __init kernel_module_init(void)
     printk(KERN_INFO "%s: Process '%s' has PID %d\n", DEVICE_NAME, process2, tempRet);
     tempRet = name_lookup(process3);
     printk(KERN_INFO "%s: Process '%s' has PID %d\n", DEVICE_NAME, process3, tempRet);
+
+    // 3. Resolve PIDs
+    tmp_ptr = PID_lookup(PID1);
+    if (tmp_ptr) { printk(KERN_INFO "%s: PID %d is named '%s'\n", DEVICE_NAME, PID1, tmp_ptr); } else { HARKLE_KERROR(DEVICE_NAME, kernel_module_init, "log PID_lookup() failed"); }
+    tmp_ptr = PID_lookup(PID2);
+    if (tmp_ptr) { printk(KERN_INFO "%s: PID %d is named '%s'\n", DEVICE_NAME, PID2, tmp_ptr); } else { HARKLE_KERROR(DEVICE_NAME, kernel_module_init, "log PID_lookup() failed"); }
+    tmp_ptr = PID_lookup(PID3);
+    if (tmp_ptr) { printk(KERN_INFO "%s: PID %d is named '%s'\n", DEVICE_NAME, PID3, tmp_ptr); } else { HARKLE_KERROR(DEVICE_NAME, kernel_module_init, "log PID_lookup() failed"); }
 
     //////////
     // DONE //
@@ -159,6 +174,40 @@ int name_lookup(char *procName)
                     break;  // Stop looking
                 }
             }
+        }
+    }
+
+    return retVal;
+}
+
+const char *PID_lookup(int PIDnum)
+{
+    // LOCAL VARIABLES
+    char *retVal = NULL;
+    struct task_struct *task;
+
+    // INPUT VALIDATION
+    if (PIDnum < 1)
+    {
+        HARKLE_KERROR(DEVICE_NAME, PID_lookup, "Invalid PID");
+    }
+    else
+    {
+        for_each_process(task)
+        {
+            if (task->comm)
+            {
+                if (task->pid == PIDnum)
+                {
+                    retVal = task->comm;  // Found it
+                    break;  // Stop looking
+                }
+            }
+        }
+
+        if (!retVal)
+        {
+            HARKLE_KWARNG(DEVICE_NAME, PID_lookup, "Unable to find PID");
         }
     }
 

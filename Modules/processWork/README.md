@@ -6,15 +6,16 @@
     [X] 1. Makefile
     [X] 2. Basic compilable shell
     
-[ ] Basic Functionality
+[X] Basic Functionality
 
     [X] 1. List running processes
     [X] 2. Resolve name -> PID
-    [ ] 3. Resolve PID -> name
+    [X] 3. Resolve PID -> name
 
-[ ] Enhanced Functionality
+[X] Enhanced Functionality
 
-	[ ] 1. Max length for process names?
+	[X] 1. Max length for process names?
+	[ ] 2. 0 == strstr(procName, task->comm) instead of maxLenShenanigans?
 
 ### SPECIFIC RESOURCES
 

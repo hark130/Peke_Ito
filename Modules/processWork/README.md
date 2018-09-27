@@ -1,14 +1,14 @@
 ## PROCESS MANAGEMENT LINUX KERNEL MODULE (LKM)
 
 ### TO DO
-[ ] Basic Driver Framework
+[X] Basic Driver Framework
 
-    [ ] 1. Makefile
-    [ ] 2. Basic compilable shell
+    [X] 1. Makefile
+    [X] 2. Basic compilable shell
     
 [ ] Basic Functionality
 
-    [ ] 1. List running processes
+    [X] 1. List running processes
     [ ] 2. Resolve name -> PID
     [ ] 3. Resolve PID -> name
 
@@ -16,7 +16,7 @@
 
 #### Process Management
 
-- None
+- [for_each_process](http://tuxthink.blogspot.com/2011/03/using-foreachprocess-in-proc-entry.html)
 
 ### NOTES
 

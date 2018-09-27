@@ -59,6 +59,7 @@ const char *PID_lookup(int PIDnum);
 /* GLOBALS */
 /////////////
 myProcDevice myPD;
+size_t longestName;
 
 //////////////////////////
 /* FUNCTION DEFINITIONS */
@@ -79,6 +80,8 @@ static int __init kernel_module_init(void)
     {
         HARKLE_KERROR(DEVICE_NAME, kernel_module_init, "memset() failed");
     }
+    // 2. Longest name
+    longestName = 0;
 
     ////////////////////////
     // DO SOMETHING BASIC //
@@ -92,6 +95,7 @@ static int __init kernel_module_init(void)
     else
     {
         printk(KERN_INFO "%s: There are currently %d running processes\n", DEVICE_NAME, tempRet);
+        printk(KERN_INFO "%s: The longest process name is %lu characters long\n", DEVICE_NAME, longestName);
     }
 
     // 2. Resolve some names
@@ -132,10 +136,19 @@ int log_processes(void)
 {
     int retVal = 0;
     struct task_struct *task;
+    size_t nameLen = 0;
 
     for_each_process(task)
     {
         printk(KERN_INFO "%s: %s [%d]\n", DEVICE_NAME, task->comm, task->pid);
+        if (task->comm)
+        {
+            nameLen = strlen(task->comm);
+            if (nameLen > longestName)
+            {
+                longestName = nameLen;
+            }
+        }
         retVal++;
     }
 
@@ -148,6 +161,7 @@ int name_lookup(char *procName)
     int retVal = 0;
     struct task_struct *task;
     size_t procNameLen = 0;  // Length of procName
+    size_t maxLen = 0;  // Apparently, processes have a max length
 
     // INPUT VALIDATION
     if (!procName)
@@ -162,8 +176,20 @@ int name_lookup(char *procName)
     }
     else
     {
-        procNameLen = strlen(procName);
+        // Determine max process name length
+        if (!longestName)
+        {
+            maxLen = MAX_PROC_NAME_LEN;
+        }
 
+        // Determine max length
+        procNameLen = strlen(procName);
+        if (maxLen < procNameLen)
+        {
+            procNameLen = maxLen;
+        }
+
+        // Search for the name
         for_each_process(task)
         {
             if (task->comm)

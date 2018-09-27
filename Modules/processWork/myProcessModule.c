@@ -3,7 +3,7 @@
     FILE:        myProcessModule.c
     PURPOSE:     A basic process management Linux Kernel Module
     DATE:        Updated 20180926
-    VERSION:     0.0.1
+    VERSION:     0.1.0
  */
 
 ////////////

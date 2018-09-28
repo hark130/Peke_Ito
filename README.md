@@ -89,3 +89,6 @@ Nagsasanay ako sa Linux system at umuunlad ng kernel.
 * [Interrupt vs Polling Chararacter Drivers](http://en.tldp.org/LDP/khg/HyperNews/get/devices/char.html)
 * [Common Device Driver Functionality](http://en.tldp.org/LDP/khg/HyperNews/get/devices/reference.html)
 * [Phrack](http://www.phrack.org/) - an ezine written by and for hackers 
+
+## Ideas
+* Phantom Keystroker from ThinkGeek
